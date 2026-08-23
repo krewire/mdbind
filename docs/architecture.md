@@ -21,6 +21,6 @@ mdbind/
 
 ## Conventions
 
-- Documentation in English, Markdown, spec-driven (`internal/docs/specs/mdbind/` in `krewire/internal`).
+- Documentation in English, Markdown, spec-driven (`docs/specs/`).
 - Quality gates: `gofmt -l .`, `go vet ./...`, `go test ./...` in each Go repo; per-kind `krewire build` / `krewire build --plan` spot-checks.
 - Cross-repo testing via temporary `replace` in `go.mod`; never `go.work`.
