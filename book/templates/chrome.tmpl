@@ -1,0 +1,32 @@
+{{define "navbar"}}
+<header class="topbar">
+  <nav>
+    <a class="brand" href="{{.BasePath}}">{{.Book.Title}}</a>
+    {{range .NavLinks}}<a href="{{.URL}}">{{.Text}}</a>{{end}}
+    {{if .Theme}}{{.Theme.Button}}{{end}}
+  </nav>
+</header>
+{{end}}
+
+{{define "sidebar"}}
+<aside class="sidebar">
+  <p class="sidebar-title">Contents</p>
+  <nav>
+    {{range .Toc}}
+    <a href="{{.Link}}"{{if .Active}} class="active"{{end}}><span class="num">{{.Label}}</span> {{.Title}}</a>
+    {{range .Subs}}
+    <a href="{{.Link}}" class="sub{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>
+    {{end}}
+    {{end}}
+  </nav>
+</aside>
+{{end}}
+
+{{define "footer"}}
+<footer class="site-footer">
+  <div class="inner">
+    <p>{{if .FooterText}}{{.FooterText}}{{else}}{{if .Book.Author}}&copy; {{.Book.Author}}{{end}}{{end}}</p>
+    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind">mdbind</a> and the <a href="https://github.com/krewire/framework">Krewire Framework</a>.</p>
+  </div>
+</footer>
+{{end}}

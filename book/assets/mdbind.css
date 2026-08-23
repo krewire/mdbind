@@ -1,0 +1,342 @@
+/* mdbind default reader stylesheet
+   Colors follow the Krewire UI palette: base-1..3, primary, secondary,
+   accent, ghost, neutral, success, info, warning, error and their
+   *-content companions. A site enabling ui.Theme may override any token.
+   The --show-sun/--show-moon mode variables and the .theme-toggle button
+   styles come from the ui framework (ui.ThemeModeVarsCSS, ui.ThemeToggleCSS)
+   and are appended to this stylesheet at build time. */
+:root {
+  color-scheme: light;
+  --base-1: #fdfdfb;
+  --base-1-content: #1a1a1a;
+  --base-2: #f5f2eb;
+  --base-2-content: #666;
+  --base-3: #efece4;
+  --base-3-content: #4a4a4a;
+  --primary: #00c853;
+  --primary-content: #ffffff;
+  --secondary: #4a8f7a;
+  --secondary-content: #ffffff;
+  --accent: #f59e0b;
+  --accent-content: #ffffff;
+  --ghost: #e9e6dc;
+  --ghost-content: #666;
+  --neutral: #e3e0d8;
+  --neutral-content: #666;
+  --success: #15803d;
+  --success-content: #ffffff;
+  --info: #0d9488;
+  --info-content: #ffffff;
+  --warning: #b45309;
+  --warning-content: #ffffff;
+  --error: #b91c1c;
+  --error-content: #ffffff;
+  --ink: var(--base-1-content);
+  --muted: var(--base-2-content);
+  --paper: var(--base-1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --base-1: #17171a;
+  --base-1-content: #e6e4dd;
+  --base-2: #202024;
+  --base-2-content: #9a968b;
+  --base-3: #2a2a30;
+  --base-3-content: #c6c2b8;
+  --primary: #5cff8e;
+  --primary-content: #06160d;
+  --secondary: #7fc99d;
+  --secondary-content: #07130b;
+  --accent: #ffb020;
+  --accent-content: #241a00;
+  --ghost: #26262b;
+  --ghost-content: #9a968b;
+  --neutral: #2e2e34;
+  --neutral-content: #9a968b;
+  --success: #4ade80;
+  --success-content: #0b1f10;
+--info: #2dd4bf;
+--info-content: #062a23;
+  --warning: #fbbf24;
+  --warning-content: #241a00;
+  --error: #f87171;
+  --error-content: #260a0a;
+  --ink: var(--base-1-content);
+  --muted: var(--base-2-content);
+  --paper: var(--base-1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --base-1: #17171a;
+    --base-1-content: #e6e4dd;
+    --base-2: #202024;
+    --base-2-content: #9a968b;
+    --base-3: #2a2a30;
+    --base-3-content: #c6c2b8;
+    --primary: #5cff8e;
+    --primary-content: #06160d;
+    --secondary: #8b8f9c;
+    --secondary-content: #0e0e11;
+    --accent: #ffb020;
+    --accent-content: #241a00;
+    --ghost: #26262b;
+    --ghost-content: #9a968b;
+    --neutral: #2e2e34;
+    --neutral-content: #9a968b;
+    --success: #4ade80;
+    --success-content: #0b1f10;
+    --info: #60a5fa;
+    --info-content: #0a1628;
+    --warning: #fbbf24;
+    --warning-content: #241a00;
+    --error: #f87171;
+    --error-content: #260a0a;
+    --ink: var(--base-1-content);
+    --muted: var(--base-2-content);
+    --paper: var(--base-1);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font: 17px/1.65 Georgia, "Times New Roman", serif;
+  color: var(--ink);
+  background: var(--paper);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* navbar */
+.topbar { background: var(--base-2); border-bottom: 1px solid var(--neutral); }
+
+.topbar nav {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.topbar .brand {
+  margin-right: auto;
+  font-weight: 800;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.topbar nav a { color: var(--ink); text-decoration: none; font-size: 0.95rem; }
+.topbar nav a:hover { color: var(--primary); }
+
+/* theme toggle */
+.theme-toggle {
+  border: 1px solid var(--neutral);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  padding: 0.35rem 0.5rem;
+  line-height: 0;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle:hover { border-color: var(--primary); color: var(--primary); }
+
+.theme-toggle svg { width: 1.05rem; height: 1.05rem; display: block; }
+
+.theme-toggle .icon-sun { display: var(--show-sun); }
+.theme-toggle .icon-moon { display: var(--show-moon); }
+
+/* layout */
+.layout {
+  flex: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 2.5rem;
+}
+
+/* sidebar */
+.sidebar {
+  align-self: start;
+  position: sticky;
+  top: 1.5rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+
+.sidebar .sidebar-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sidebar nav a:hover { background: var(--ghost); }
+
+.sidebar nav a.active {
+  background: var(--ghost);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.sidebar nav a.sub {
+  padding-left: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.sidebar nav a.sub.active { color: var(--primary); }
+
+.sidebar .num {
+  margin-right: 0.4rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* breadcrumbs */
+nav.crumbs {
+  margin-bottom: 0.6rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+nav.crumbs a { color: var(--muted); text-decoration: none; }
+
+nav.crumbs a:hover { color: var(--primary); }
+
+nav.crumbs .sep {
+  margin: 0 0.4rem;
+  color: var(--neutral-content);
+}
+
+nav.crumbs .current { color: var(--primary); font-weight: 600; }
+
+/* subchapter toc on auto-generated chapter pages */
+.chapter .sub-toc {
+  padding-left: 1.2rem;
+  line-height: 1.9;
+}
+
+.chapter .sub-toc a { color: var(--primary); text-decoration: none; }
+
+.chapter .sub-toc a:hover { text-decoration: underline; }
+
+.chapter .sub-toc strong {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  margin-right: 0.5rem;
+}
+
+/* main */
+main { min-width: 0; }
+
+main h1 {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+
+main .author { color: var(--muted); margin-top: 0; }
+
+main .lede { color: var(--muted); }
+
+main .start {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-content);
+  text-decoration: none;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+}
+
+/* chapter content */
+.chapter { line-height: 1.75; }
+
+.chapter code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  background: var(--base-3);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+
+.chapter pre {
+  background: var(--base-3);
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+.chapter pre code { background: none; padding: 0; }
+
+.chapter blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--neutral);
+  color: var(--muted);
+}
+
+nav.pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--neutral);
+}
+
+nav.pager a { color: var(--primary); text-decoration: none; }
+
+/* footer */
+.site-footer {
+  border-top: 1px solid var(--neutral);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.site-footer .inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.site-footer a { color: var(--primary); }
+
+@media (max-width: 48rem) {
+  .layout { grid-template-columns: 1fr; gap: 1.5rem; }
+
+  .sidebar { position: static; }
+
+  .sidebar nav { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+
+  .sidebar nav a { padding: 0.3rem 0.5rem; }
+}

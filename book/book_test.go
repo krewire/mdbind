@@ -1,0 +1,496 @@
+package book
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/krewire/framework/ui"
+)
+
+// writeManuscript creates a temporary manuscript directory with the given
+// filename-to-body mapping and returns its path. Nested names create
+// subdirectories.
+func writeManuscript(t *testing.T, files map[string]string) string {
+	t.Helper()
+	dir := t.TempDir()
+	for name, body := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
+}
+
+func TestLoadSubchapters(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-intro.md":              "# Intro\n",
+		"02-tutorials/_index.md":   "# Tutorials\n",
+		"02-tutorials/02-setup.md": "# Setup\n",
+		"02-tutorials/01-hello.md": "# Hello\n",
+		"03-outro.md":              "# Outro\n",
+	})
+	b, err := Load(dir, "B", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 3 {
+		t.Fatalf("got %d chapters, want 3", len(b.Chapters))
+	}
+	tut := &b.Chapters[1]
+	if tut.Title != "Tutorials" || len(tut.Subs) != 2 {
+		t.Fatalf("tutorials = %+v, want title Tutorials with 2 subs", tut)
+	}
+	if tut.Subs[0].Title != "Hello" || tut.Subs[1].Title != "Setup" {
+		t.Errorf("sub order = %q, %q; want Hello, Setup", tut.Subs[0].Title, tut.Subs[1].Title)
+	}
+	if got := tut.Subs[0].Path(); got != "/tutorials/hello" {
+		t.Errorf("sub path = %q, want /tutorials/hello", got)
+	}
+	if tut.Subs[0].Parent != tut || tut.Subs[0].Number != 2 || tut.Subs[0].Sub != 1 {
+		t.Errorf("sub lineage wrong: parent/set %+v", tut.Subs[0])
+	}
+	flat := b.flattened()
+	if len(flat) != 5 {
+		t.Fatalf("flattened = %d pages, want 5", len(flat))
+	}
+	if tut.Prev != flat[0] || tut.Next != tut.Subs[0] || tut.Subs[0].Next != tut.Subs[1] || tut.Subs[1].Next != flat[4] {
+		t.Error("linear prev/next wiring across subchapters is wrong")
+	}
+}
+
+func TestSubchapterAutoListAndSidebar(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-guide/01-a.md":  "# A\n",
+		"01-guide/02-b.md":  "# B\n",
+		"02-part/_index.md": "# Part\n",
+		"02-part/01-one.md": "# One\n",
+	})
+	b, err := Load(dir, "B", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b.Chapters[0].Body), "class=\"sub-toc\"") {
+		t.Error("directory without an index file must auto-list its subchapters")
+	}
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(Config{Input: dir, Output: out, Title: "B", BasePath: "/guide/"}); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(out, "guide", "a", "index.html")
+	html, err := os.ReadFile(sub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`class="crumbs"`,
+		`>Home</a>`,
+		`href="/guide/guide/"`,
+		`class="sub active"`, // viewing a subchapter marks it active...
+		`class="sub"`,        // ...its sibling shows as plain
+		`href="/guide/guide/b/"`,
+		`class="pager"`,
+	} {
+		if !strings.Contains(string(html), want) {
+			t.Errorf("subchapter page missing %q", want)
+		}
+	}
+}
+
+func TestLoadOrdersChapters(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"02-second.md": "# Second\n\nBody B.\n",
+		"01-first.md":  "# First\n\nBody A.\n",
+		"README.md":    "# Not a chapter\n",
+	})
+	b, err := Load(dir, "My Book", "Author")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 3 {
+		t.Fatalf("got %d chapters, want 3", len(b.Chapters))
+	}
+	if b.Chapters[0].Title != "First" || b.Chapters[1].Title != "Second" {
+		t.Errorf("chapters = %q, %q; want First, Second", b.Chapters[0].Title, b.Chapters[1].Title)
+	}
+	if got := b.Chapters[0].Path(); got != "/first" {
+		t.Errorf("path = %q, want /first", got)
+	}
+	if got := b.Chapters[2].Path(); got != "/readme" {
+		t.Errorf("un-numbered chapter path = %q, want /readme", got)
+	}
+	if b.Chapters[0].Next != &b.Chapters[1] || b.Chapters[1].Prev != &b.Chapters[0] {
+		t.Error("prev/next navigation not wired correctly")
+	}
+	if !strings.Contains(string(b.Chapters[0].Body), "<p>Body A.</p>") {
+		t.Errorf("body = %q, want rendered HTML", b.Chapters[0].Body)
+	}
+}
+
+func TestLoadTitleFallbackToSlug(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"intro.md": "no heading here\n"})
+	b, err := Load(dir, "T", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 1 {
+		t.Fatalf("got %d chapters, want 1", len(b.Chapters))
+	}
+	if b.Chapters[0].Title != "intro" {
+		t.Errorf("title = %q, want intro", b.Chapters[0].Title)
+	}
+}
+
+func TestBuildExportsDeterministicSite(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-chapter-one.md": "# Chapter One\n\nHello **world**.\n",
+	})
+	if _, err := Build(Config{Input: dir, Output: filepath.Join(dir, "..", "out"), Title: "Book", Author: "Reas"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildSetsAffordDefaults(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"index.md": "# Home\n"})
+	created, err := Build(Config{Input: dir, Title: "B", Author: "A"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll("site") })
+	if len(created) < 2 {
+		t.Fatalf("created %d paths, want at least 2: %v", len(created), created)
+	}
+	for _, p := range created {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("created path missing: %s", p)
+		}
+	}
+
+	index, err := os.ReadFile("site/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(index), ">B<") {
+		t.Errorf("index.html = %q, want book title", index)
+	}
+	css, err := os.ReadFile("site/assets/mdbind.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(css), "mdbind") {
+		t.Errorf("css = %q, want default stylesheet", css)
+	}
+}
+
+func TestBuildDeterministic(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-a.md": "# A\n"})
+	mk := func() string {
+		out := filepath.Join(t.TempDir(), "site")
+		if _, err := Build(Config{Input: dir, Output: out, Title: "T", Author: "A"}); err != nil {
+			t.Fatal(err)
+		}
+		paths := []string{
+			filepath.Join(out, "index.html"),
+			filepath.Join(out, "a", "index.html"),
+			filepath.Join(out, "assets", "mdbind.css"),
+		}
+		digest := ""
+		for _, p := range paths {
+			b, err := os.ReadFile(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			digest += string(b)
+		}
+		return digest
+	}
+	if mk() != mk() {
+		t.Error("build output is not deterministic")
+	}
+}
+
+func TestHandlerServesBookAndAssets(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-hello.md": "# Hello\n"})
+	b, err := Load(dir, "T", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := b.Handler()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tt := []struct {
+		path string
+		code int
+	}{
+		{"/", http.StatusOK},
+		{"/hello", http.StatusOK},
+		{"/assets/mdbind.css", http.StatusOK},
+		{"/missing", http.StatusNotFound},
+	}
+	for _, tc := range tt {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if rec.Code != tc.code {
+			t.Errorf("%s = %d, want %d", tc.path, rec.Code, tc.code)
+		}
+	}
+}
+
+func TestBuildWithBasePath(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-one.md": "# One\n\nSee the [next](/two) chapter.\n",
+		"02-two.md": "# Two\n\nBack to [home](/).\n",
+	})
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(Config{Input: dir, Output: out, Title: "B", Author: "A", BasePath: "/guide/"}); err != nil {
+		t.Fatal(err)
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`href="/guide/assets/mdbind.css"`, `href="/guide/one/"`, `href="/guide/two/"`} {
+		if !strings.Contains(string(index), want) {
+			t.Errorf("index.html missing %s", want)
+		}
+	}
+
+	chapter, err := os.ReadFile(filepath.Join(out, "one", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`href="/guide/assets/mdbind.css"`,
+		`href="/guide/two/"`,
+		`href="/guide/two/"`, // in-body absolute link rewritten
+		`href="/guide/"`,     // in-body "/" link rewritten
+	} {
+		if !strings.Contains(string(chapter), want) {
+			t.Errorf("chapter one missing %s", want)
+		}
+	}
+
+	// Page files stay root-relative; only links are prefixed.
+	if _, err := os.Stat(filepath.Join(out, "one", "index.html")); err != nil {
+		t.Errorf("chapter exported at wrong path: %v", err)
+	}
+}
+
+func TestNormalizeBase(t *testing.T) {
+	tt := []struct{ in, want string }{
+		{"", "/"},
+		{"/", "/"},
+		{"guide", "/guide/"},
+		{"/guide", "/guide/"},
+		{"guide/", "/guide/"},
+		{"/guide/", "/guide/"},
+	}
+	for _, tc := range tt {
+		if got := normalizeBase(tc.in); got != tc.want {
+			t.Errorf("normalizeBase(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestPrefixLinks(t *testing.T) {
+	if got := prefixLinks(`<a href="/getting-started">`, "/guide/"); got != `<a href="/guide/getting-started/">` {
+		t.Errorf("prefixLinks = %q", got)
+	}
+	if got := prefixLinks(`<a href="/">`, "/guide/"); got != `<a href="/guide/">` {
+		t.Errorf("prefixLinks root = %q", got)
+	}
+	if got := prefixLinks(`<a href="/guide/y">`, "/guide/"); got != `<a href="/guide/y">` {
+		t.Errorf("prefixLinks double = %q", got)
+	}
+	if got := prefixLinks(`<img src="/img.png">`, "/guide/"); got != `<img src="/guide/img.png">` {
+		t.Errorf("prefixLinks src = %q", got)
+	}
+	if got := prefixLinks(`<a href="/getting-started">`, "/"); got != `<a href="/getting-started/">` {
+		t.Errorf("prefixLinks root base = %q", got)
+	}
+	if got := prefixLinks(`<a href="//example.com">`, "/guide/"); got != `<a href="//example.com">` {
+		t.Errorf("prefixLinks protocol-relative = %q", got)
+	}
+}
+
+func TestPageLink(t *testing.T) {
+	if got := pageLink("/intro"); got != "/intro/" {
+		t.Errorf("pageLink = %q", got)
+	}
+	if got := pageLink("/intro/"); got != "/intro/" {
+		t.Errorf("pageLink already slashed = %q", got)
+	}
+	if got := pageLink("/"); got != "/" {
+		t.Errorf("pageLink root = %q", got)
+	}
+	if got := pageLink("/tutorials/setup"); got != "/tutorials/setup/" {
+		t.Errorf("pageLink nested = %q", got)
+	}
+	if got := pageLink("/assets/mdbind.css"); got != "/assets/mdbind.css" {
+		t.Errorf("pageLink asset = %q", got)
+	}
+}
+
+func TestChrome(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-one.md": "# One\n",
+		"02-two.md": "# Two\n",
+	})
+	out := filepath.Join(t.TempDir(), "site")
+	_, err := Build(Config{
+		Input:      dir,
+		Output:     out,
+		Title:      "B",
+		Author:     "Reas",
+		BasePath:   "/docs/",
+		NavLinks:   []Link{{Text: "Krewire", URL: "/"}, {Text: "GitHub", URL: "https://github.com/krewire"}},
+		FooterText: "Krewire Book — MIT",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`class="topbar"`,
+		`href="/docs/"`,      // navbar brand
+		`>Krewire</a>`,       // navbar extra link
+		`>GitHub</a>`,        // navbar extra link
+		`class="sidebar"`,    // sidebar
+		`href="/docs/one/"`,  // sidebar entry
+		`href="/docs/two/"`,  // sidebar entry
+		`Krewire Book — MIT`, // footer text
+		`class="start"`,      // start reading CTA
+	} {
+		if !strings.Contains(string(index), want) {
+			t.Errorf("index.html missing %q", want)
+		}
+	}
+
+	chapter, err := os.ReadFile(filepath.Join(out, "one", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`class="topbar"`,
+		`class="sidebar"`,
+		`href="/docs/one/" class="active"`, // current chapter highlighted
+		`href="/docs/two/"`,
+		`Krewire Book — MIT`,
+		`class="pager"`,
+		`href="/docs/two/"`, // next link
+	} {
+		if !strings.Contains(string(chapter), want) {
+			t.Errorf("chapter one missing %q", want)
+		}
+	}
+
+	if strings.Contains(string(chapter), `href="/docs/two/" class="active"`) {
+		t.Error("non-current chapter must not be active in the sidebar")
+	}
+}
+
+func TestThemeSwitcher(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-one.md": "# One\n"})
+	out := filepath.Join(t.TempDir(), "site")
+	_, err := Build(Config{
+		Input:    dir,
+		Output:   out,
+		Title:    "B",
+		BasePath: "/guide/",
+		Theme:    &ui.Theme{StorageKey: "site-theme", Default: "dark"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`data-theme-toggle`,
+		`icon-sun`,
+		`icon-moon`,
+		`site-theme`, // custom storage key
+		`<meta name="color-scheme" content="light dark">`,
+		`window.krewireTheme`,
+	} {
+		if !strings.Contains(string(index), want) {
+			t.Errorf("index.html missing %q", want)
+		}
+	}
+}
+
+func TestThemeDisabledByDefault(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-one.md": "# One\n"})
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(Config{Input: dir, Output: out, Title: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(index), "data-theme-toggle") {
+		t.Error("theme switcher must be absent when Theme is unset")
+	}
+}
+
+func TestSplitOrder(t *testing.T) {
+	tt := []struct {
+		in    string
+		order int
+		stem  string
+	}{
+		{"01-intro.md", 1, "-intro"},
+		{"12-chapter.md", 12, "-chapter"},
+		{"notes.md", int(^uint(0) >> 1), "notes"},
+	}
+	for _, tc := range tt {
+		gotOrder, gotStem := splitOrder(tc.in)
+		if gotOrder != tc.order || gotStem != tc.stem {
+			t.Errorf("splitOrder(%q) = (%d, %q), want (%d, %q)", tc.in, gotOrder, gotStem, tc.order, tc.stem)
+		}
+	}
+}
+
+func TestSlugFor(t *testing.T) {
+	tt := []struct {
+		in, want string
+	}{
+		{"01-getting started.md", "getting-started"},
+		{"chapter - one.md", "chapter-one"},
+		{"README.md", "readme"},
+		{"12-Some Title.md", "some-title"},
+	}
+	for _, tc := range tt {
+		if got := slugFor(tc.in); got != tc.want {
+			t.Errorf("slugFor(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestTitleFor(t *testing.T) {
+	if got := titleFor([]byte("# Real Title\nbody"), "slug"); got != "Real Title" {
+		t.Errorf("titleFor = %q, want Real Title", got)
+	}
+	if got := titleFor([]byte("## Ignore Me\n# Take Me\n"), "slug"); got != "Take Me" {
+		t.Errorf("titleFor = %q, want Take Me", got)
+	}
+	if got := titleFor([]byte("no headings\n"), "the-slug"); got != "the-slug" {
+		t.Errorf("titleFor = %q, want the-slug", got)
+	}
+}
