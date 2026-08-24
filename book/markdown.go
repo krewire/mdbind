@@ -29,9 +29,9 @@ func renderMarkdown(body []byte, base string) (string, error) {
 }
 
 // prefixLinks rewrites absolute href/src links so they resolve under the given
-// base path, e.g. "/getting-started" -> "/guide/getting-started/". Page links
-// gain a trailing slash so static hosts serve directory indexes without a
-// redirect.
+// base path, e.g. "/getting-started" -> "/guide/getting-started". Page links
+// keep the extensionless form of the emitted .html file URLs; only the site
+// root keeps its trailing slash.
 func prefixLinks(html, base string) string {
 	prefix := ""
 	if base != "" && base != "/" {
@@ -48,9 +48,6 @@ func prefixLinks(html, base string) string {
 			out += prefix + "/"
 		}
 		out += rest
-		if isPagePath("/"+rest) && !strings.HasSuffix(rest, "/") {
-			out += "/"
-		}
 		return out + `"`
 	})
 }

@@ -7,7 +7,7 @@ In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M
 ## Features
 
 - **Book-shaped output** — ordered chapters, table of contents, prev/next navigation.
-- **Dir-based routing** — URLs mirror the manuscript filesystem, no `/chapters/` segment, trailing-slash normalization for static hosts.
+- **File-based routing** — URLs mirror the manuscript filesystem, no `/chapters/` segment, each chapter served as an extensionless sibling `.html` file (`/{slug}`, `/{chapter}/{sub}`).
 - **Markdown native** — GFM via a pure-Go processor.
 - **Static export** — complete website from one folder via `framework/web`.
 - **Library or CLI** — `book.Build` powers both `kiw build` (book mode, canonical) and standalone `mdbind` (superseded by `kiw build` for Krewire projects).

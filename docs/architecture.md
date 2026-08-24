@@ -4,7 +4,7 @@
 
 ```
 mdbind/
-├── book/                 # Core: load manuscript, render Markdown (GFM), scoped CSS, dir-based routing, export to site/
+├── book/                 # Core: load manuscript, render Markdown (GFM), scoped CSS, file-based routing, export to site/
 │   ├── assets/           # mdbind.css
 │   └── templates/        # chrome.tmpl, chapter.tmpl, index.tmpl
 ├── cmd/mdbind/           # Standalone CLI (for non-Krewire use; Krewire projects use `kiw build`)
@@ -15,7 +15,7 @@ mdbind/
 **Design decisions:**
 
 - **Book = one workload of the unified matrix.** `site` (`framework/web/ssg`) and `book` (`mdbind`) are siblings, both driven by `kiw build`; `docs` (this documentation site) is a `book` showcase.
-- **Dir-based routing.** URLs mirror `manuscript/` filesystem, no `/chapters/` segment, trailing-slash normalization for static hosts.
+- **File-based routing.** URLs mirror `manuscript/` filesystem, no `/chapters/` segment; every route is extensionless and maps one-to-one onto a sibling `.html` file.
 - **Library + CLI.** `book.Build(Config{Input, Output, Title, Author})` powers both `kiw build` (book mode) and standalone `mdbind`.
 
 

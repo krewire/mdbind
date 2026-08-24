@@ -4,8 +4,8 @@ import (
 	"strings"
 )
 
-// link prefixes a site path with the book's base path and normalizes chapter
-// links to trailing-slash form for static hosting.
+// link prefixes a site path with the book's base path and keeps chapter
+// links in extensionless form.
 func (b *Book) link(path string) string {
 	path = pageLink(path)
 	if b.base == "" || b.base == "/" {
@@ -14,17 +14,19 @@ func (b *Book) link(path string) string {
 	return strings.TrimRight(b.base, "/") + path
 }
 
-// pageLink appends a trailing slash to chapter page paths so static hosts
-// serve directory indexes without a redirect.
+// pageLink normalizes a chapter page path to the extensionless form its
+// sibling .html file is served at, stripping any trailing slash; asset and
+// root paths pass through unchanged.
 func pageLink(path string) string {
-	if isPagePath(path) && !strings.HasSuffix(path, "/") {
-		return path + "/"
+	trimmed := strings.TrimRight(path, "/")
+	if trimmed == "" || !isPagePath(trimmed) {
+		return path
 	}
-	return path
+	return trimmed
 }
 
-// isPagePath reports whether path points to a rendered page (a directory
-// index) rather than the site root or an asset file.
+// isPagePath reports whether path points to a rendered page file rather than
+// the site root or an asset file.
 func isPagePath(path string) bool {
 	if path == "" || path == "/" {
 		return false

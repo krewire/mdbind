@@ -49,7 +49,10 @@ func Build(cfg Config) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := web.Export(cfg.Output, pages, Assets()); err != nil {
+	if err := exportPages(cfg.Output, pages); err != nil {
+		return nil, err
+	}
+	if err := web.Export(cfg.Output, nil, Assets()); err != nil {
 		return nil, err
 	}
 	return b.createdPaths(cfg.Output), nil

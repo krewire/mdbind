@@ -31,10 +31,10 @@ type Chapter struct {
 	Parent *Chapter
 }
 
-// Path returns the chapter page URL: /{slug}/ for top-level chapters and
-// /{parent}/{slug}/ for subchapters, mirroring the manuscript tree. Links are
-// normalized to trailing-slash form and prefixed with the book's base path by
-// Book.link.
+// Path returns the chapter page URL: /{slug} for top-level chapters and
+// /{parent}/{slug} for subchapters, mirroring the manuscript tree. URLs stay
+// extensionless — each page is emitted as a sibling .html file served at that
+// address — and are prefixed with the book's base path by Book.link.
 func (c Chapter) Path() string {
 	if c.Parent != nil {
 		return "/" + c.Parent.Slug + "/" + c.Slug

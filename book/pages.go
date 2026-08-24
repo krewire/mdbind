@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -124,13 +125,44 @@ func (b *Book) autoSubList(ch *Chapter, subs []source) string {
 	return sb.String()
 }
 
-// createdPaths computes the files WebExport will produce for the book,
+// exportPages writes each page under outDir as the sibling .html file its
+// extensionless URL maps to: "/" becomes index.html and "/a/b" becomes
+// outDir/a/b.html.
+func exportPages(outDir string, pages []web.Page) error {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return err
+	}
+	for _, p := range pages {
+		name := "index.html"
+		if rel := strings.Trim(p.Path, "/"); rel != "" {
+			name = rel + ".html"
+		}
+		out := filepath.Join(outDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+			return err
+		}
+		f, err := os.Create(out)
+		if err != nil {
+			return err
+		}
+		if err := p.Render(f); err != nil {
+			f.Close()
+			return err
+		}
+		if err := f.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// createdPaths computes the files the build will produce for the book,
 // mirroring the export shape for deterministic reporting.
 func (b *Book) createdPaths(outDir string) []string {
 	paths := []string{filepath.Join(outDir, "index.html"), filepath.Join(outDir, "assets", "mdbind.css")}
 	for _, ch := range b.flattened() {
 		rel := strings.TrimPrefix(ch.Path(), "/")
-		paths = append(paths, filepath.Join(outDir, filepath.FromSlash(rel), "index.html"))
+		paths = append(paths, filepath.Join(outDir, filepath.FromSlash(rel)+".html"))
 	}
 	sort.Strings(paths)
 	return paths

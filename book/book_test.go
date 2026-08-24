@@ -84,7 +84,7 @@ func TestSubchapterAutoListAndSidebar(t *testing.T) {
 	if _, err := Build(Config{Input: dir, Output: out, Title: "B", BasePath: "/guide/"}); err != nil {
 		t.Fatal(err)
 	}
-	sub := filepath.Join(out, "guide", "a", "index.html")
+	sub := filepath.Join(out, "guide", "a.html")
 	html, err := os.ReadFile(sub)
 	if err != nil {
 		t.Fatal(err)
@@ -92,10 +92,10 @@ func TestSubchapterAutoListAndSidebar(t *testing.T) {
 	for _, want := range []string{
 		`class="crumbs"`,
 		`>Home</a>`,
-		`href="/guide/guide/"`,
+		`href="/guide/guide"`,
 		`class="sub active"`, // viewing a subchapter marks it active...
 		`class="sub"`,        // ...its sibling shows as plain
-		`href="/guide/guide/b/"`,
+		`href="/guide/guide/b"`,
 		`class="pager"`,
 	} {
 		if !strings.Contains(string(html), want) {
@@ -198,7 +198,7 @@ func TestBuildDeterministic(t *testing.T) {
 		}
 		paths := []string{
 			filepath.Join(out, "index.html"),
-			filepath.Join(out, "a", "index.html"),
+			filepath.Join(out, "a.html"),
 			filepath.Join(out, "assets", "mdbind.css"),
 		}
 		digest := ""
@@ -258,21 +258,21 @@ func TestBuildWithBasePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`href="/guide/assets/mdbind.css"`, `href="/guide/one/"`, `href="/guide/two/"`} {
+	for _, want := range []string{`href="/guide/assets/mdbind.css"`, `href="/guide/one"`, `href="/guide/two"`} {
 		if !strings.Contains(string(index), want) {
 			t.Errorf("index.html missing %s", want)
 		}
 	}
 
-	chapter, err := os.ReadFile(filepath.Join(out, "one", "index.html"))
+	chapter, err := os.ReadFile(filepath.Join(out, "one.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
 		`href="/guide/assets/mdbind.css"`,
-		`href="/guide/two/"`,
-		`href="/guide/two/"`, // in-body absolute link rewritten
-		`href="/guide/"`,     // in-body "/" link rewritten
+		`href="/guide/two"`,
+		`href="/guide/two"`, // in-body absolute link rewritten
+		`href="/guide/"`,    // in-body "/" link rewritten
 	} {
 		if !strings.Contains(string(chapter), want) {
 			t.Errorf("chapter one missing %s", want)
@@ -280,7 +280,7 @@ func TestBuildWithBasePath(t *testing.T) {
 	}
 
 	// Page files stay root-relative; only links are prefixed.
-	if _, err := os.Stat(filepath.Join(out, "one", "index.html")); err != nil {
+	if _, err := os.Stat(filepath.Join(out, "one.html")); err != nil {
 		t.Errorf("chapter exported at wrong path: %v", err)
 	}
 }
@@ -302,7 +302,7 @@ func TestNormalizeBase(t *testing.T) {
 }
 
 func TestPrefixLinks(t *testing.T) {
-	if got := prefixLinks(`<a href="/getting-started">`, "/guide/"); got != `<a href="/guide/getting-started/">` {
+	if got := prefixLinks(`<a href="/getting-started">`, "/guide/"); got != `<a href="/guide/getting-started">` {
 		t.Errorf("prefixLinks = %q", got)
 	}
 	if got := prefixLinks(`<a href="/">`, "/guide/"); got != `<a href="/guide/">` {
@@ -314,7 +314,7 @@ func TestPrefixLinks(t *testing.T) {
 	if got := prefixLinks(`<img src="/img.png">`, "/guide/"); got != `<img src="/guide/img.png">` {
 		t.Errorf("prefixLinks src = %q", got)
 	}
-	if got := prefixLinks(`<a href="/getting-started">`, "/"); got != `<a href="/getting-started/">` {
+	if got := prefixLinks(`<a href="/getting-started">`, "/"); got != `<a href="/getting-started">` {
 		t.Errorf("prefixLinks root base = %q", got)
 	}
 	if got := prefixLinks(`<a href="//example.com">`, "/guide/"); got != `<a href="//example.com">` {
@@ -323,16 +323,16 @@ func TestPrefixLinks(t *testing.T) {
 }
 
 func TestPageLink(t *testing.T) {
-	if got := pageLink("/intro"); got != "/intro/" {
+	if got := pageLink("/intro"); got != "/intro" {
 		t.Errorf("pageLink = %q", got)
 	}
-	if got := pageLink("/intro/"); got != "/intro/" {
-		t.Errorf("pageLink already slashed = %q", got)
+	if got := pageLink("/intro/"); got != "/intro" {
+		t.Errorf("pageLink slashed = %q, want extensionless", got)
 	}
 	if got := pageLink("/"); got != "/" {
 		t.Errorf("pageLink root = %q", got)
 	}
-	if got := pageLink("/tutorials/setup"); got != "/tutorials/setup/" {
+	if got := pageLink("/tutorials/setup"); got != "/tutorials/setup" {
 		t.Errorf("pageLink nested = %q", got)
 	}
 	if got := pageLink("/assets/mdbind.css"); got != "/assets/mdbind.css" {
@@ -369,8 +369,8 @@ func TestChrome(t *testing.T) {
 		`>Krewire</a>`,       // navbar extra link
 		`>GitHub</a>`,        // navbar extra link
 		`class="sidebar"`,    // sidebar
-		`href="/docs/one/"`,  // sidebar entry
-		`href="/docs/two/"`,  // sidebar entry
+		`href="/docs/one"`,   // sidebar entry
+		`href="/docs/two"`,   // sidebar entry
 		`Krewire Book — MIT`, // footer text
 		`class="start"`,      // start reading CTA
 	} {
@@ -379,25 +379,25 @@ func TestChrome(t *testing.T) {
 		}
 	}
 
-	chapter, err := os.ReadFile(filepath.Join(out, "one", "index.html"))
+	chapter, err := os.ReadFile(filepath.Join(out, "one.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
 		`class="topbar"`,
 		`class="sidebar"`,
-		`href="/docs/one/" class="active"`, // current chapter highlighted
-		`href="/docs/two/"`,
+		`href="/docs/one" class="active"`, // current chapter highlighted
+		`href="/docs/two"`,
 		`Krewire Book — MIT`,
 		`class="pager"`,
-		`href="/docs/two/"`, // next link
+		`href="/docs/two"`, // next link
 	} {
 		if !strings.Contains(string(chapter), want) {
 			t.Errorf("chapter one missing %q", want)
 		}
 	}
 
-	if strings.Contains(string(chapter), `href="/docs/two/" class="active"`) {
+	if strings.Contains(string(chapter), `href="/docs/two" class="active"`) {
 		t.Error("non-current chapter must not be active in the sidebar")
 	}
 }

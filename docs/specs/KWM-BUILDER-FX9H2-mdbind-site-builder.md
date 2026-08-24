@@ -67,7 +67,7 @@ The following are explicitly out of scope for the initial phase:
 | MDB-SB-003 | Derive the chapter title from its first `#` heading, falling back to its slug. | Must |
 | MDB-SB-004 | Render Markdown bodies to HTML before inclusion in pages.         | Must     |
 | MDB-SB-019 | Treat a manuscript sub-directory as a chapter with subchapters; number subchapters "N.M" within their chapter. | Must     |
-| MDB-SB-020 | Serve chapters and subchapters at directory URLs mirroring the manuscript tree (`/{slug}/` and `/{chapter}/{sub}/`) under the configured base path. | Must |
+| MDB-SB-020 | Serve chapters and subchapters at extensionless file URLs mirroring the manuscript tree (`/{slug}`, `/{chapter}/{sub}`), each emitted as a sibling `.html` file, under the configured base path. Internal links carry the same extensionless form. | Must |
 | MDB-SB-021 | An `index.md` or `_index.md` in a sub-directory becomes its chapter page body; without one, the chapter page auto-lists its subchapters. | Must |
 
 ### 5.2 Site Generation
