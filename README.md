@@ -2,7 +2,7 @@
 
 **mdbind** assembles folders of Markdown into book-shaped static websites — `github.com/krewire/mdbind`. It implements the `book` project kind in the unified Krewire framework and is the engine behind the [Krewire documentation site](https://github.com/krewire/docs).
 
-In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M8K2Q-unified-framework-vision.md)), `mdbind` covers `book` while `framework/web/ssg` covers `site`. Both are built by `krewire build` and share routing, theming (`framework/ui`), and the single `krewire.yaml`.
+In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M8K2Q-unified-framework-vision.md)), `mdbind` covers `book` while `framework/web/ssg` covers `site`. Both are built by `kiw build` and share routing, theming (`framework/ui`), and the single `krewire.yaml`.
 
 ## Features
 
@@ -10,7 +10,7 @@ In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M
 - **Dir-based routing** — URLs mirror the manuscript filesystem, no `/chapters/` segment, trailing-slash normalization for static hosts.
 - **Markdown native** — GFM via a pure-Go processor.
 - **Static export** — complete website from one folder via `framework/web`.
-- **Library or CLI** — `book.Build` powers both `krewire build` (book mode) and standalone `mdbind`.
+- **Library or CLI** — `book.Build` powers both `kiw build` (book mode, canonical) and standalone `mdbind` (superseded by `kiw build` for Krewire projects).
 - **Dogfooded** — built on `framework` and `libs`, following unified conventions.
 
 ## Workspace Layout
@@ -18,7 +18,7 @@ In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M
 | Path | Description |
 |------|-------------|
 | `book/` | Site builder: loading, rendering, export. |
-| `cmd/mdbind/` | Standalone `mdbind` CLI (superseded by `krewire build` for Krewire projects). |
+| `cmd/mdbind/` | Standalone `mdbind` CLI (superseded by `kiw build` for Krewire projects). |
 | `internal/commands/` | CLI sub-commands (`build`, `init`, `serve`). |
 | `docs/` | Specifications (`KWM-*`). |
 
@@ -36,14 +36,14 @@ go test ./...
 gofmt -l . && go vet ./...
 ```
 
-### Using via `krewire` (recommended for Krewire projects)
+### Using via `kiw` (recommended for Krewire projects)
 
 ```sh
-krewire new mybook
-krewire init --book mybook
+kiw new mybook
+kiw init --book mybook
 # manuscript/ already populated
-krewire build        # book mode: manuscript/ → site/
-krewire serve        # preview at :8080
+kiw build            # book mode: manuscript/ → site/
+kiw serve            # preview at :8080
 ```
 
 ### Using standalone `mdbind`

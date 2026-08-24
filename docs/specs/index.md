@@ -4,10 +4,10 @@ This directory holds the formal specifications for mdbind.
 
 Ordered by **impact-to-effort** (high impact, low effort first) and **dependency chain** (foundations first).
 
-| SpecID    | Title                                      | Status | Depends On |
-| --------- | ------------------------------------------ | ------ | ---------- |
-| [KWM-FX9H2](./KWM-BUILDER-FX9H2-mdbind-site-builder.md) | mdbind Site Builder — Initial Specification | Draft | — |
-| [KWM-4TCPA](./KWM-CLI-4TCPA-cli-workflows.md)      | mdbind CLI & Workflows                    | Draft | KWM-FX9H2 |
+| SpecID    | Title                                      | Status | Impl Status | Depends On |
+| --------- | ------------------------------------------ | ------ | ----------- | ---------- |
+| [KWM-FX9H2](./KWM-BUILDER-FX9H2-mdbind-site-builder.md) | mdbind Site Builder — Initial Specification | Draft | Shipped | — |
+| [KWM-4TCPA](./KWM-CLI-4TCPA-cli-workflows.md)      | mdbind CLI & Workflows                    | Draft | Superseded (standalone CLI → `kiw build` book mode) | KWM-FX9H2 |
 
 ## Conventions
 

@@ -8,7 +8,7 @@
 
 - **Dogfooded.** Built on `framework/web` and `libs`; follows unified `krewire.yaml` precedence (flags > env > defaults).
 - **Static export.** Output is `site/` (each page as `<path>/index.html` + assets) — host anywhere.
-- **Spec-driven.** `KWM-*` specs in `krewire/internal` (`docs/specs/mdbind/`).
+- **Spec-driven.** `KWM-*` specs live in this repo (`docs/specs/`).
 
 
 ## Contribution
