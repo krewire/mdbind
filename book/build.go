@@ -1,8 +1,10 @@
 package book
 
 import (
-	"github.com/krewire/framework/ui"
-	"github.com/krewire/framework/web"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 )
 
 // Config configures a build.
@@ -19,13 +21,34 @@ type Config struct {
 	// Generated links and asset references are prefixed accordingly. Defaults
 	// to "/".
 	BasePath string
+	// MountPath places the whole book under a sub-path of the output and the
+	// URL space, e.g. "/docs/" exports docs/index.html plus docs/<slug>.html
+	// and prefixes every link with /docs/. Unlike BasePath it relocates the
+	// exported files, letting a book co-exist with an ssg site in one output
+	// (progressive enhancement). Empty mounts at the root.
+	MountPath string
+	// NoRootTOC suppresses the generated root table-of-contents page so the
+	// book does not write index.html at its mount — used when an ssg landing
+	// page already owns "/" in a shared output. Chapter pages are unaffected.
+	NoRootTOC bool
+	// Include holds glob patterns (slash-separated, ** crosses segments)
+	// selecting which content files build; nil defaults to "**/*.md".
+	// An empty non-nil slice disables inclusion (builds nothing).
+	Include []string
+	// Exclude holds glob patterns removed after include filtering; nil
+	// defaults to README/readme developer notes ("**/README.md",
+	// "**/readme.md"). An empty non-nil slice excludes nothing.
+	Exclude []string
 	// NavLinks are optional extra links rendered in the navbar.
 	NavLinks []Link
 	// FooterText is optional text shown in the footer; when empty the footer
 	// shows the author copyright instead.
 	FooterText string
+	// Version is the product version rendered in the page credit line; empty
+	// omits it. Sourced from krewire.yaml `version:` by kiw build.
+	Version string
 	// Theme, when non-nil, enables the light/dark theme switcher on every page.
-	Theme *ui.Theme
+	Theme *Theme
 }
 
 // Build renders the manuscript in cfg.Input into a static website in
@@ -35,12 +58,22 @@ func Build(cfg Config) ([]string, error) {
 		cfg.Input = "."
 	}
 	if cfg.Output == "" {
-		cfg.Output = "site"
+		cfg.Output = ".krewire/build"
 	}
-	b, err := LoadWithBase(cfg.Input, cfg.Title, cfg.Author, cfg.BasePath)
+	mount := normalizeBase(cfg.MountPath)
+	base := cfg.BasePath
+	if mount != "/" {
+		if base == "" || base == "/" {
+			base = mount
+		}
+	}
+	b, err := loadWithRules(cfg.Input, cfg.Title, cfg.Author, base, cfg.Include, cfg.Exclude)
 	if err != nil {
 		return nil, err
 	}
+	b.mount = strings.TrimSuffix(mount, "/")
+	b.noRootTOC = cfg.NoRootTOC
+	b.version = cfg.Version
 	b.WithChrome(cfg.NavLinks, cfg.FooterText)
 	if cfg.Theme != nil {
 		b.WithTheme(cfg.Theme)
@@ -49,13 +82,43 @@ func Build(cfg Config) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := exportPages(cfg.Output, pages); err != nil {
+	if err := exportPages(cfg.Output, pages, b.mount); err != nil {
 		return nil, err
 	}
-	if err := web.Export(cfg.Output, nil, Assets()); err != nil {
+	if err := exportMountedAssets(cfg.Output, b.mount, Assets()); err != nil {
 		return nil, err
 	}
 	return b.createdPaths(cfg.Output), nil
+}
+
+func exportAssets(outDir string, assets map[string]string) error {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return err
+	}
+	names := make([]string, 0, len(assets))
+	for name := range assets {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		out := filepath.Join(outDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(out, []byte(assets[name]), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// exportMountedAssets writes assets under outDir/mount when the book is
+// mounted at a sub-path so links like /docs/assets/mdbind.css resolve.
+func exportMountedAssets(outDir, mount string, assets map[string]string) error {
+	if mount == "" {
+		return exportAssets(outDir, assets)
+	}
+	return exportAssets(filepath.Join(outDir, filepath.FromSlash(mount)), assets)
 }
 
 // WithChrome sets the book's navigation chrome: optional navbar links and
@@ -68,7 +131,7 @@ func (b *Book) WithChrome(nav []Link, footer string) *Book {
 
 // WithTheme enables the light/dark theme switcher. Returns the Book for
 // chaining.
-func (b *Book) WithTheme(t *ui.Theme) *Book {
+func (b *Book) WithTheme(t *Theme) *Book {
 	if t != nil {
 		b.theme = t
 	}

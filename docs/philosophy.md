@@ -2,12 +2,12 @@
 
 ## Philosophy
 
-**Markdown-native, book-shaped.** `manuscript/` is the source of truth; `book.Build` turns it into a complete, navigable site with TOC and prev/next. No custom CMS, no Node toolchain.
+**Markdown-native, book-shaped.** `content/**/*.md` is the source of truth; `book.Build` turns it into a complete, navigable site with TOC and prev/next. No custom CMS, no Node toolchain, no `framework/web` needed — focus on content.
 
 **Principles:**
 
-- **Dogfooded.** Built on `framework/web` and `libs`; follows unified `krewire.yaml` precedence (flags > env > defaults).
-- **Static export.** Output is `site/` (each page as `<path>/index.html` + assets) — host anywhere.
+- **Lightweight & co-installable.** Built on `libs` + `libs/markdown` (Goldmark, shared with `framework`) and stdlib; `framework` and `mdbind` can be required together for progressive enhancement (`book` → `site` without rewrite).
+- **Static export.** Output is `.krewire/build` by default (each page as `<path>.html` + assets) — host anywhere, configurable via `krewire.yaml` `output` or `--output/-o`.
 - **Spec-driven.** `KWM-*` specs live in this repo (`docs/specs/`).
 
 

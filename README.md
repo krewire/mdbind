@@ -2,16 +2,16 @@
 
 **mdbind** assembles folders of Markdown into book-shaped static websites — `github.com/krewire/mdbind`. It implements the `book` project kind in the unified Krewire framework and is the engine behind the [Krewire documentation site](https://github.com/krewire/docs).
 
-In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M8K2Q-unified-framework-vision.md)), `mdbind` covers `book` while `framework/web/ssg` covers `site`. Both are built by `kiw build` and share routing, theming (`framework/ui`), and the single `krewire.yaml`.
+In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M8K2Q-unified-framework-vision.md)), `mdbind` covers `book` (content-first, lightweight) while `framework/web/ssg` covers `site` (design-first, powerful). Both are built by `kiw build` to `.krewire/build`, share the Goldmark renderer via `libs/markdown`, and use the single `krewire.yaml`. A docs site can start as `book` and progressively enhance to `site` without rewrite — both modules are co-installable in the same `go.mod`.
 
 ## Features
 
 - **Book-shaped output** — ordered chapters, table of contents, prev/next navigation.
-- **File-based routing** — URLs mirror the manuscript filesystem, no `/chapters/` segment, each chapter served as an extensionless sibling `.html` file (`/{slug}`, `/{chapter}/{sub}`).
-- **Markdown native** — GFM via a pure-Go processor.
-- **Static export** — complete website from one folder via `framework/web`.
+- **File-based routing** — URLs mirror the content filesystem, no `/chapters/` segment, each chapter served as an extensionless sibling `.html` file (`/{slug}`, `/{chapter}/{sub}`).
+- **Markdown native** — GFM via `libs/markdown` (Goldmark, shared with `framework`), deterministic.
+- **Static export** — complete website from one folder via stdlib + `libs/markdown` (no `framework/web` needed).
 - **Library or CLI** — `book.Build` powers both `kiw build` (book mode, canonical) and standalone `mdbind` (superseded by `kiw build` for Krewire projects).
-- **Dogfooded** — built on `framework` and `libs`, following unified conventions.
+- **Lightweight** — `mdbind` depends only on `libs` + `libs/markdown` + stdlib, not on `framework`; both can be required together for progressive enhancement.
 
 ## Workspace Layout
 
@@ -41,8 +41,8 @@ gofmt -l . && go vet ./...
 ```sh
 kiw new mybook
 kiw init --book mybook
-# manuscript/ already populated
-kiw build            # book mode: manuscript/ → site/
+# content/docs/ already populated
+kiw build            # book mode: content/ → .krewire/build (README notes skipped)
 kiw serve            # preview at :8080
 ```
 
@@ -51,7 +51,7 @@ kiw serve            # preview at :8080
 ```sh
 mdbind init
 mdbind build --title "My Book" --author "Me"
-open site/index.html
+open .krewire/build/index.html
 
 mdbind serve --addr :8080
 ```
@@ -62,11 +62,15 @@ Settings honor Krewire precedence: flags > `MDBIND_*` env > defaults (`MDBIND_IN
 
 ```go
 created, err := book.Build(book.Config{
-    Input:  "manuscript",
-    Output: "site",
+    Input:  "content",
+    Output: ".krewire/build",
     Title:  "My Book",
     Author: "Me",
 })
+// Add framework progressively later:
+// go get github.com/krewire/framework
+// kiw init --site  // adds pages/*.kiw + ssg: without removing content/
+// kiw build        // merges both into .krewire/build
 ```
 
 ## Specifications
@@ -76,8 +80,8 @@ created, err := book.Build(book.Config{
 
 ## Related Repositories
 
-- [framework](https://github.com/krewire/framework) — unified framework (`web`/`ssg` for `site`, `runtime` for frontend, `ui` for theming)
-- [libs](https://github.com/krewire/libs) — shared primitives (`core`, `term`, `config`, `validate`)
+- [framework](https://github.com/krewire/framework) — unified framework (`web`/`ssg` for `site`, `runtime` for frontend, `ui` for theming) — shares `libs/markdown` with `mdbind` for co-existence
+- [libs](https://github.com/krewire/libs) — shared primitives (`core`, `term`, `config`, `validate`, `markdown`)
 - [docs](https://github.com/krewire/docs) — documentation site, built with `mdbind` (`book` kind)
 
 ## License

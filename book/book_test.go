@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/krewire/framework/ui"
 )
 
 // writeManuscript creates a temporary manuscript directory with the given
@@ -108,7 +106,7 @@ func TestLoadOrdersChapters(t *testing.T) {
 	dir := writeManuscript(t, map[string]string{
 		"02-second.md": "# Second\n\nBody B.\n",
 		"01-first.md":  "# First\n\nBody A.\n",
-		"README.md":    "# Not a chapter\n",
+		"NOTES.md":     "# Not a chapter heading source, but a plain chapter\n",
 	})
 	b, err := Load(dir, "My Book", "Author")
 	if err != nil {
@@ -123,8 +121,8 @@ func TestLoadOrdersChapters(t *testing.T) {
 	if got := b.Chapters[0].Path(); got != "/first" {
 		t.Errorf("path = %q, want /first", got)
 	}
-	if got := b.Chapters[2].Path(); got != "/readme" {
-		t.Errorf("un-numbered chapter path = %q, want /readme", got)
+	if got := b.Chapters[2].Path(); got != "/notes" {
+		t.Errorf("un-numbered chapter path = %q, want /notes", got)
 	}
 	if b.Chapters[0].Next != &b.Chapters[1] || b.Chapters[1].Prev != &b.Chapters[0] {
 		t.Error("prev/next navigation not wired correctly")
@@ -163,7 +161,7 @@ func TestBuildSetsAffordDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll("site") })
+	t.Cleanup(func() { os.RemoveAll(".krewire") })
 	if len(created) < 2 {
 		t.Fatalf("created %d paths, want at least 2: %v", len(created), created)
 	}
@@ -173,14 +171,14 @@ func TestBuildSetsAffordDefaults(t *testing.T) {
 		}
 	}
 
-	index, err := os.ReadFile("site/index.html")
+	index, err := os.ReadFile(".krewire/build/index.html")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(index), ">B<") {
 		t.Errorf("index.html = %q, want book title", index)
 	}
-	css, err := os.ReadFile("site/assets/mdbind.css")
+	css, err := os.ReadFile(".krewire/build/assets/mdbind.css")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,6 +280,79 @@ func TestBuildWithBasePath(t *testing.T) {
 	// Page files stay root-relative; only links are prefixed.
 	if _, err := os.Stat(filepath.Join(out, "one.html")); err != nil {
 		t.Errorf("chapter exported at wrong path: %v", err)
+	}
+}
+
+func TestBuildWithMountPath(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-one.md": "# One\n\nSee the [next](/two) chapter.\n",
+		"02-two.md": "# Two\n",
+	})
+	out := filepath.Join(t.TempDir(), "build")
+	created, err := Build(Config{Input: dir, Output: out, Title: "B", Author: "A", MountPath: "/docs/"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range []string{
+		filepath.Join(out, "docs", "index.html"),
+		filepath.Join(out, "docs", "one.html"),
+		filepath.Join(out, "docs", "assets", "mdbind.css"),
+	} {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("mounted export missing %s: %v", p, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, "index.html")); !os.IsNotExist(err) {
+		t.Error("mounted book must not write a root index.html")
+	}
+	for _, got := range created {
+		if _, err := os.Stat(got); err != nil {
+			t.Errorf("created path missing: %s", got)
+		}
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "docs", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`href="/docs/assets/mdbind.css"`, `href="/docs/one"`} {
+		if !strings.Contains(string(index), want) {
+			t.Errorf("mounted index missing %q", want)
+		}
+	}
+
+	chapter, err := os.ReadFile(filepath.Join(out, "docs", "one.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`href="/docs/two"`, `href="/docs/"`} {
+		if !strings.Contains(string(chapter), want) {
+			t.Errorf("mounted chapter missing %q", want)
+		}
+	}
+}
+
+func TestHandlerServesMountedBook(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-hello.md": "# Hello\n"})
+	b, err := LoadWithBase(dir, "T", "", "/docs/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.mount = "docs"
+	h, err := b.Handler()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/docs/hello", nil))
+	if rec.Code != http.StatusOK {
+		t.Errorf("/docs/hello = %d, want 200", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/hello", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("unmounted /hello = %d, want 404", rec.Code)
 	}
 }
 
@@ -410,7 +481,7 @@ func TestThemeSwitcher(t *testing.T) {
 		Output:   out,
 		Title:    "B",
 		BasePath: "/guide/",
-		Theme:    &ui.Theme{StorageKey: "site-theme", Default: "dark"},
+		Theme:    &Theme{StorageKey: "site-theme", Default: "dark"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -449,6 +520,113 @@ func TestThemeDisabledByDefault(t *testing.T) {
 	}
 }
 
+func TestLoadStripsFrontmatter(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-intro.md": "---\ntitle: \"Ignored\"\ndate: \"2026-08-25\"\n---\n\n# Real Title\n\nBody.\n",
+	})
+	b, err := Load(dir, "B", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Chapters[0].Title != "Real Title" {
+		t.Errorf("title = %q, want Real Title from H1 after stripping frontmatter", b.Chapters[0].Title)
+	}
+	if strings.Contains(string(b.Chapters[0].Body), "frontmatter") || strings.Contains(string(b.Chapters[0].Body), "Ignored") {
+		t.Errorf("body must not contain frontmatter: %q", b.Chapters[0].Body)
+	}
+	if !strings.Contains(string(b.Chapters[0].Body), "<p>Body.</p>") {
+		t.Errorf("body = %q, want rendered markdown", b.Chapters[0].Body)
+	}
+}
+
+func TestNoRootTOCSuppressesIndexPage(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-a.md": "# A\n"})
+	out := filepath.Join(t.TempDir(), "build")
+	created, err := Build(Config{Input: dir, Output: out, Title: "T", NoRootTOC: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "index.html")); !os.IsNotExist(err) {
+		t.Error("NoRootTOC must suppress the root index.html")
+	}
+	if _, err := os.Stat(filepath.Join(out, "a.html")); err != nil {
+		t.Errorf("chapter page must still be exported: %v", err)
+	}
+	for _, p := range created {
+		if strings.HasSuffix(filepath.ToSlash(p), "/index.html") {
+			t.Errorf("created paths must not include a root index.html: %v", created)
+		}
+	}
+}
+
+func TestDefaultExcludesReadmeNotes(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"01-a.md":            "# A\n",
+		"README.md":          "# Root notes\n",
+		"docs/README.md":     "# Nested notes\n",
+		"docs/readme.md":     "# lowercase notes\n",
+		"docs/02-getting.md": "# Getting\n",
+	})
+	b, err := Load(dir, "B", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 2 {
+		t.Fatalf("got %d chapters, want 2 ([a] + [docs/getting]; README/readme excluded)", len(b.Chapters))
+	}
+	if b.Chapters[0].Slug != "a" {
+		t.Errorf("chapter 1 = %q, want a", b.Chapters[0].Slug)
+	}
+	if b.Chapters[1].Slug != "docs" || len(b.Chapters[1].Subs) != 1 || b.Chapters[1].Subs[0].Slug != "getting" {
+		t.Errorf("docs chapter = %+v, want single sub getting", b.Chapters[1])
+	}
+	for _, ch := range b.flattened() {
+		if ch.Slug == "readme" {
+			t.Error("README notes must be excluded by default")
+		}
+	}
+}
+
+func TestIncludeExcludeRules(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"guide/01-a.md":  "# A\n",
+		"guide/02-b.md":  "# B\n",
+		"api/01-rest.md": "# Rest\n",
+		"drafts/x.md":    "# X\n",
+	})
+
+	b, err := LoadWithRules(dir, "B", "", "/", []string{"guide/**", "api/**"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 2 {
+		t.Fatalf("include filter: got %d chapters (%v), want guide+api", len(b.Chapters), b.Chapters)
+	}
+
+	b, err = LoadWithRules(dir, "B", "", "/", nil, []string{"drafts/**"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 2 {
+		t.Fatalf("exclude filter: got %d chapters (%v), want guide+api only", len(b.Chapters), b.Chapters)
+	}
+	for _, ch := range b.flattened() {
+		if ch.Slug == "x" || ch.Slug == "drafts" {
+			t.Errorf("exclude drafts/** leaked %q", ch.Slug)
+		}
+	}
+
+	empty := []string{}
+	b, err = LoadWithRules(dir, "B", "", "/", empty, empty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Filtering fully disabled: guide(1+2) + api(1+1) + drafts(1+1) = 7 pages.
+	if len(b.flattened()) != 7 {
+		t.Fatalf("explicit empty rules must disable filtering, got %d pages", len(b.flattened()))
+	}
+}
+
 func TestSplitOrder(t *testing.T) {
 	tt := []struct {
 		in    string
@@ -473,7 +651,7 @@ func TestSlugFor(t *testing.T) {
 	}{
 		{"01-getting started.md", "getting-started"},
 		{"chapter - one.md", "chapter-one"},
-		{"README.md", "readme"},
+		{"NOTES.md", "notes"},
 		{"12-Some Title.md", "some-title"},
 	}
 	for _, tc := range tt {

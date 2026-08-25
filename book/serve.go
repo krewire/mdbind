@@ -3,43 +3,46 @@ package book
 import (
 	"log/slog"
 	"net/http"
-
-	"github.com/krewire/framework/web"
 )
 
 // Handler returns an http.Handler that serves the book's pages and assets
-// through the web router.
-func (b *Book) Handler() (*web.Router, error) {
+// through a stdlib ServeMux. It is intentionally not dependent on
+// framework/web so the book can be served without pulling the framework.
+func (b *Book) Handler() (http.Handler, error) {
 	pages, err := b.Pages()
 	if err != nil {
 		return nil, err
 	}
-	byPath := make(map[string]web.Page, len(pages))
+	mux := http.NewServeMux()
 	for _, p := range pages {
-		byPath[p.Path] = p
-	}
-	r := web.NewRouter()
-	r.Get("/", renderPage(byPath["/"]))
-	for _, p := range pages {
-		if p.Path != "/" {
-			r.Get(p.Path, renderPage(p))
+		pp := p
+		route := pp.Path
+		if b.mount != "" {
+			route = "/" + b.mount + pp.Path
 		}
+		mux.HandleFunc(route, func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != route {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_ = pp.Render(w)
+		})
 	}
-	r.Get("/assets/mdbind.css", func(w http.ResponseWriter, _ *http.Request, _ web.Params) {
+	css := Assets()["assets/mdbind.css"]
+	mux.HandleFunc(b.mount+"/assets/mdbind.css", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
-		w.Write([]byte(Assets()["assets/mdbind.css"]))
+		_, _ = w.Write([]byte(css))
 	})
-	r.NotFound = func(w http.ResponseWriter, _ *http.Request, _ web.Params) {
-		web.HTML(w, http.StatusNotFound, "404 — page not found")
-	}
-	return r, nil
-}
-
-// renderPage adapts a web.Page into a route handler.
-func renderPage(p web.Page) web.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request, _ web.Params) {
-		_ = p.Render(w)
-	}
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h, pattern := mux.Handler(r)
+		if pattern == "" {
+			http.Error(w, "404 — page not found", http.StatusNotFound)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+	return handler, nil
 }
 
 // Serve serves the book over HTTP on addr, blocking until the server stops.

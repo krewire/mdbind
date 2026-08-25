@@ -8,34 +8,41 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/krewire/framework/ui"
-	"github.com/krewire/framework/web"
 )
 
-// Pages builds the site's web.Page tree: the root landing page and one page
+// Page is a renderable page for export or serve. Path is the extensionless
+// URL (e.g. "/getting-started"); Render writes the HTML to w.
+type Page struct {
+	Path   string
+	Render func(w io.Writer) error
+}
+
+// Pages builds the site's Page tree: the root landing page and one page
 // per chapter. Exported page paths are always root-relative; only the links
 // emitted into the rendered HTML carry the book's base path.
-func (b *Book) Pages() ([]web.Page, error) {
+func (b *Book) Pages() ([]Page, error) {
 	tpls, err := parseTemplates()
 	if err != nil {
 		return nil, err
 	}
 	toc := b.chapterList(nil)
-	root := web.Page{
-		Path: "/",
-		Render: func(w io.Writer) error {
-			data := b.pageData(nil, toc)
-			if flat := b.flattened(); len(flat) > 0 {
-				data.First = &linkRef{Title: flat[0].Title, Link: b.link(flat[0].Path())}
-				data.Pages = len(flat)
-			} else {
-				data.Pages = 0
-			}
-			return tpls.ExecuteTemplate(w, "index.tmpl", data)
-		},
+	pages := make([]Page, 0, len(b.Chapters)+1)
+	if !b.noRootTOC {
+		root := Page{
+			Path: "/",
+			Render: func(w io.Writer) error {
+				data := b.pageData(nil, toc)
+				if flat := b.flattened(); len(flat) > 0 {
+					data.First = &linkRef{Title: flat[0].Title, Link: b.link(flat[0].Path())}
+					data.Pages = len(flat)
+				} else {
+					data.Pages = 0
+				}
+				return tpls.ExecuteTemplate(w, "index.tmpl", data)
+			},
+		}
+		pages = append(pages, root)
 	}
-	pages := []web.Page{root}
 	for _, ch := range b.flattened() {
 		data := b.pageData(ch, b.chapterList(ch))
 		data.Crumbs = b.crumbs(ch)
@@ -45,7 +52,7 @@ func (b *Book) Pages() ([]web.Page, error) {
 		if ch.Next != nil {
 			data.Next = &linkRef{Title: ch.Next.Title, Link: b.link(ch.Next.Path())}
 		}
-		pages = append(pages, web.Page{
+		pages = append(pages, Page{
 			Path: ch.Path(),
 			Render: func(w io.Writer) error {
 				return tpls.ExecuteTemplate(w, "chapter.tmpl", data)
@@ -106,6 +113,7 @@ func (b *Book) pageData(ch *Chapter, toc []tocEntry) pageData {
 		Toc:        toc,
 		NavLinks:   b.navLinks,
 		FooterText: b.footerText,
+		Version:    b.version,
 		Theme:      b.theme,
 	}
 }
@@ -127,9 +135,14 @@ func (b *Book) autoSubList(ch *Chapter, subs []source) string {
 
 // exportPages writes each page under outDir as the sibling .html file its
 // extensionless URL maps to: "/" becomes index.html and "/a/b" becomes
-// outDir/a/b.html.
-func exportPages(outDir string, pages []web.Page) error {
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+// outDir/a/b.html. A non-empty mount sub-path relocates the files so a book
+// can share one output with an ssg site.
+func exportPages(outDir string, pages []Page, mount string) error {
+	root := outDir
+	if mount != "" {
+		root = filepath.Join(outDir, filepath.FromSlash(mount))
+	}
+	if err := os.MkdirAll(root, 0o755); err != nil {
 		return err
 	}
 	for _, p := range pages {
@@ -137,7 +150,7 @@ func exportPages(outDir string, pages []web.Page) error {
 		if rel := strings.Trim(p.Path, "/"); rel != "" {
 			name = rel + ".html"
 		}
-		out := filepath.Join(outDir, filepath.FromSlash(name))
+		out := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 			return err
 		}
@@ -159,10 +172,18 @@ func exportPages(outDir string, pages []web.Page) error {
 // createdPaths computes the files the build will produce for the book,
 // mirroring the export shape for deterministic reporting.
 func (b *Book) createdPaths(outDir string) []string {
-	paths := []string{filepath.Join(outDir, "index.html"), filepath.Join(outDir, "assets", "mdbind.css")}
+	baseOut := outDir
+	if b.mount != "" {
+		baseOut = filepath.Join(outDir, filepath.FromSlash(b.mount))
+	}
+	var paths []string
+	if !b.noRootTOC {
+		paths = append(paths, filepath.Join(baseOut, "index.html"))
+	}
+	paths = append(paths, filepath.Join(baseOut, "assets", "mdbind.css"))
 	for _, ch := range b.flattened() {
 		rel := strings.TrimPrefix(ch.Path(), "/")
-		paths = append(paths, filepath.Join(outDir, filepath.FromSlash(rel)+".html"))
+		paths = append(paths, filepath.Join(baseOut, filepath.FromSlash(rel)+".html"))
 	}
 	sort.Strings(paths)
 	return paths
@@ -181,7 +202,8 @@ type pageData struct {
 	Next       *linkRef
 	NavLinks   []Link
 	FooterText string
-	Theme      *ui.Theme
+	Version    string
+	Theme      *Theme
 }
 
 // tocEntry is one row in the sidebar chapter list. Subs holds the expanded

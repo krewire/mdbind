@@ -1,6 +1,7 @@
 package book
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"os"
@@ -29,9 +30,17 @@ type item struct {
 }
 
 // Load reads a manuscript directory into a Book in reading order, served from
-// the site root.
+// the site root. Default include/exclude rules apply (README notes skipped).
 func Load(input, title, author string) (*Book, error) {
 	return LoadWithBase(input, title, author, "/")
+}
+
+// LoadWithRules reads a content directory into a Book applying explicit
+// include/exclude glob rules (slash-separated patterns relative to input;
+// ** crosses segments). nil selects the defaults — include "**/*.md",
+// exclude README/readme developer notes.
+func LoadWithRules(input, title, author, base string, include, exclude []string) (*Book, error) {
+	return loadWithRules(input, title, author, base, include, exclude)
 }
 
 // LoadWithBase reads a manuscript directory into a Book in reading order. Top
@@ -40,7 +49,13 @@ func Load(input, title, author string) (*Book, error) {
 // index.md or _index.md inside a directory becomes the chapter page body;
 // without one, the chapter page lists its subchapters automatically. The base
 // is the URL prefix the site will be served under, e.g. "/guide/".
+// YAML frontmatter (leading --- block) is tolerated and stripped so content
+// files stay compatible with framework/web/ssg collections.
 func LoadWithBase(input, title, author, base string) (*Book, error) {
+	return loadWithRules(input, title, author, base, nil, nil)
+}
+
+func loadWithRules(input, title, author, base string, include, exclude []string) (*Book, error) {
 	if input == "" {
 		input = "."
 	}
@@ -63,15 +78,18 @@ func LoadWithBase(input, title, author, base string) (*Book, error) {
 				if se.IsDir() || !strings.HasSuffix(sn, ".md") {
 					continue
 				}
+				if !accepts(include, exclude, name+"/"+sn) {
+					continue
+				}
 				data, err := os.ReadFile(filepath.Join(input, name, sn))
 				if err != nil {
 					return nil, fmt.Errorf("book: read %s: %w", filepath.Join(name, sn), err)
 				}
 				if isIndex(sn) {
-					it.chapter = source{file: sn, body: data}
+					it.chapter = source{file: sn, body: stripFrontmatter(data)}
 					continue
 				}
-				it.subs = append(it.subs, source{file: sn, body: data})
+				it.subs = append(it.subs, source{file: sn, body: stripFrontmatter(data)})
 			}
 			sort.Slice(it.subs, func(i, j int) bool {
 				ni, si := splitOrder(it.subs[i].file)
@@ -81,17 +99,22 @@ func LoadWithBase(input, title, author, base string) (*Book, error) {
 				}
 				return si < sj
 			})
-			items = append(items, it)
+			if it.chapter.file != "" || len(it.subs) > 0 {
+				items = append(items, it)
+			}
 			continue
 		}
 		if !strings.HasSuffix(name, ".md") || isIndex(name) {
+			continue
+		}
+		if !accepts(include, exclude, name) {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(input, name))
 		if err != nil {
 			return nil, fmt.Errorf("book: read %s: %w", name, err)
 		}
-		items = append(items, item{name: name, chapter: source{file: name, body: data}})
+		items = append(items, item{name: name, chapter: source{file: name, body: stripFrontmatter(data)}})
 	}
 
 	sort.Slice(items, func(i, j int) bool {
@@ -155,4 +178,25 @@ func LoadWithBase(input, title, author, base string) (*Book, error) {
 func isIndex(name string) bool {
 	stem := strings.TrimSuffix(name, filepath.Ext(name))
 	return stem == "index" || stem == "_index"
+}
+
+// stripFrontmatter removes a leading UTF-8 BOM and YAML frontmatter block
+// (--- ... ---) so content files shared with framework/web/ssg collections
+// render clean.
+func stripFrontmatter(body []byte) []byte {
+	body = bytes.TrimPrefix(body, []byte{0xEF, 0xBB, 0xBF})
+	text := strings.TrimLeft(string(body), " \t\r\n")
+	if !strings.HasPrefix(text, "---") {
+		return body
+	}
+	rest := text[3:]
+	idx := strings.Index(rest, "\n---")
+	if idx < 0 {
+		return body
+	}
+	after := strings.TrimLeft(rest[idx+4:], "\r\n")
+	if after == "" {
+		return []byte("\n")
+	}
+	return []byte(after)
 }

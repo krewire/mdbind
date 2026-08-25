@@ -26,7 +26,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>{{if .FooterText}}{{.FooterText}}{{else}}{{if .Book.Author}}&copy; {{.Book.Author}}{{end}}{{end}}</p>
-    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind">mdbind</a> and the <a href="https://github.com/krewire/framework">Krewire Framework</a>.</p>
+    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind">mdbind</a> and the <a href="https://github.com/krewire/framework">Krewire Framework</a>{{if .Version}} · v{{.Version}}{{end}}.</p>
   </div>
 </footer>
 {{end}}
