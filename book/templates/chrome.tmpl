@@ -1,25 +1,77 @@
 {{define "navbar"}}
 <header class="topbar">
   <nav>
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+    </button>
     <a class="brand" href="{{.BasePath}}">{{.Book.Title}}</a>
-    {{range .NavLinks}}<a href="{{.URL}}">{{.Text}}</a>{{end}}
+    {{range .NavLinks}}<a class="nav-link" href="{{.URL}}">{{.Text}}</a>{{end}}
     {{if .Theme}}{{.Theme.Button}}{{end}}
   </nav>
 </header>
 {{end}}
 
 {{define "sidebar"}}
-<aside class="sidebar">
-  <p class="sidebar-title">Contents</p>
-  <nav>
+<aside class="sidebar" id="sidebar" aria-label="Table of contents">
+  <div class="sidebar-head">
+    <p class="sidebar-title">Contents</p>
+    <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">×</button>
+  </div>
+  <nav class="toc">
     {{range .Toc}}
-    <a href="{{.Link}}"{{if .Active}} class="active"{{end}}><span class="num">{{.Label}}</span> {{.Title}}</a>
-    {{range .Subs}}
-    <a href="{{.Link}}" class="sub{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>
-    {{end}}
+      {{if .HasSubs}}
+      <div class="toc-group{{if .Open}} open{{end}}" data-group>
+        <div class="toc-parent-row">
+          <a href="{{.Link}}" class="toc-link{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>
+          <button class="toc-toggle" aria-expanded="{{if .Open}}true{{else}}false{{end}}" aria-label="Toggle submenu for {{.Title}}">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          </button>
+        </div>
+        <div class="toc-subs">
+          {{range .Subs}}<a href="{{.Link}}" class="toc-sub{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>{{end}}
+        </div>
+      </div>
+      {{else}}
+      <a href="{{.Link}}" class="toc-link{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>
+      {{end}}
     {{end}}
   </nav>
 </aside>
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+<script>
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var toggle=document.getElementById('sidebar-toggle');
+  var close=document.getElementById('sidebar-close');
+  var overlay=document.getElementById('sidebar-overlay');
+  function setOpen(open){
+    document.documentElement.classList.toggle('sidebar-open', open);
+    if(toggle) toggle.setAttribute('aria-expanded', open?'true':'false');
+    if(sidebar) sidebar.setAttribute('aria-hidden', open?'false':'true');
+  }
+  if(toggle) toggle.addEventListener('click', function(){ setOpen(!document.documentElement.classList.contains('sidebar-open')); });
+  if(close) close.addEventListener('click', function(){ setOpen(false); });
+  if(overlay) overlay.addEventListener('click', function(){ setOpen(false); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') setOpen(false); });
+  document.querySelectorAll('[data-group] .toc-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      var g=btn.closest('[data-group]');
+      var open=g.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open?'true':'false');
+      try{ localStorage.setItem('krewire-toc-'+g.querySelector('.toc-link').getAttribute('href'), open?'1':'0'); }catch(_){}
+    });
+  });
+  try{
+    document.querySelectorAll('[data-group]').forEach(function(g){
+      var href=g.querySelector('.toc-link').getAttribute('href');
+      var v=localStorage.getItem('krewire-toc-'+href);
+      if(v==='0') g.classList.remove('open');
+      if(v==='1') g.classList.add('open');
+    });
+  }catch(_){}
+})();
+</script>
 {{end}}
 
 {{define "footer"}}

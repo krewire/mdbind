@@ -75,31 +75,41 @@ func (b *Book) crumbs(ch *Chapter) []crumb {
 	return out
 }
 
-// chapterList builds the sidebar chapter list, marking active as the current
-// page. The subs of the current (or current's parent) section are expanded
-// inline with indented rows.
+// chapterList builds the sidebar chapter list for responsive collapsible nav.
+// Every chapter with subs gets a collapsible group; Open is true when the
+// group contains the active page (itself or any sub). All groups are rendered
+// so the client can toggle them without a round-trip — CSS handles the
+// collapsed state, JS persists it.
 func (b *Book) chapterList(active *Chapter) []tocEntry {
 	toc := make([]tocEntry, 0, len(b.Chapters))
 	for i := range b.Chapters {
 		ch := &b.Chapters[i]
-		expanded := ch == active || (active != nil && active.Parent == ch)
-		entry := tocEntry{
-			Label:  ch.Label() + ".",
-			Title:  ch.Title,
-			Link:   b.link(ch.Path()),
-			Active: ch == active,
-		}
-		if expanded {
-			for _, s := range ch.Subs {
-				entry.Subs = append(entry.Subs, tocEntry{
-					Label:  s.Label(),
-					Title:  s.Title,
-					Link:   b.link(s.Path()),
-					Active: s == active,
-				})
+		hasSubs := len(ch.Subs) > 0
+		activeSelf := ch == active
+		activeInSubs := false
+		subs := make([]tocEntry, 0, len(ch.Subs))
+		for _, s := range ch.Subs {
+			isActive := s == active
+			if isActive {
+				activeInSubs = true
 			}
+			subs = append(subs, tocEntry{
+				Label:  s.Label(),
+				Title:  s.Title,
+				Link:   b.link(s.Path()),
+				Active: isActive,
+			})
 		}
-		toc = append(toc, entry)
+		open := activeSelf || activeInSubs
+		toc = append(toc, tocEntry{
+			Label:   ch.Label() + ".",
+			Title:   ch.Title,
+			Link:    b.link(ch.Path()),
+			Active:  activeSelf,
+			HasSubs: hasSubs,
+			Open:    open,
+			Subs:    subs,
+		})
 	}
 	return toc
 }
@@ -206,14 +216,17 @@ type pageData struct {
 	Theme      *Theme
 }
 
-// tocEntry is one row in the sidebar chapter list. Subs holds the expanded
-// subchapter rows of the active section.
+// tocEntry is one row in the sidebar chapter list. HasSubs indicates a
+// collapsible group; Open indicates it should be expanded initially (active
+// path). Subs holds all subchapters for that group.
 type tocEntry struct {
-	Label  string
-	Title  string
-	Link   string
-	Active bool
-	Subs   []tocEntry
+	Label   string
+	Title   string
+	Link    string
+	Active  bool
+	HasSubs bool
+	Open    bool
+	Subs    []tocEntry
 }
 
 // crumb is one step in a page's breadcrumb trail.

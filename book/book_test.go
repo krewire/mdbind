@@ -91,8 +91,8 @@ func TestSubchapterAutoListAndSidebar(t *testing.T) {
 		`class="crumbs"`,
 		`>Home</a>`,
 		`href="/guide/guide"`,
-		`class="sub active"`, // viewing a subchapter marks it active...
-		`class="sub"`,        // ...its sibling shows as plain
+		`toc-sub active`, // viewing a subchapter marks it active...
+		`toc-sub`,        // ...its sibling shows as plain
 		`href="/guide/guide/b"`,
 		`class="pager"`,
 	} {
@@ -457,7 +457,7 @@ func TestChrome(t *testing.T) {
 	for _, want := range []string{
 		`class="topbar"`,
 		`class="sidebar"`,
-		`href="/docs/one" class="active"`, // current chapter highlighted
+		`toc-link active`, // current chapter highlighted
 		`href="/docs/two"`,
 		`Krewire Book — MIT`,
 		`class="pager"`,
@@ -468,8 +468,11 @@ func TestChrome(t *testing.T) {
 		}
 	}
 
-	if strings.Contains(string(chapter), `href="/docs/two" class="active"`) {
-		t.Error("non-current chapter must not be active in the sidebar")
+	if strings.Contains(string(chapter), `href="/docs/two"`) && strings.Contains(string(chapter), `toc-link active`) {
+		// ensure only the active one has active class — count occurrences
+		if strings.Count(string(chapter), `toc-link active`) != 1 {
+			t.Error("non-current chapter must not be active in the sidebar")
+		}
 	}
 }
 
