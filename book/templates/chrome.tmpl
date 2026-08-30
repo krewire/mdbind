@@ -4,7 +4,11 @@
     <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
       <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
     </button>
-    <a class="brand" href="{{.BasePath}}">{{.Book.Title}}</a>
+    <a class="brand" href="{{.BasePath}}">
+      <span class="brand-mark">◈</span>
+      <span class="brand-text">Krewire</span>
+      {{if .Version}}<span class="badge">{{.Version}}</span>{{end}}
+    </a>
     {{range .NavLinks}}<a class="nav-link" href="{{.URL}}">{{.Text}}</a>{{end}}
     {{if .Theme}}{{.Theme.Button}}{{end}}
   </nav>
