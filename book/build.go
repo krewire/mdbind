@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+const (
+	defaultInput  = "."
+	defaultOutput = ".krewire/build"
+)
+
 // Config configures a build.
 type Config struct {
 	// Title is the book title.
@@ -55,10 +60,10 @@ type Config struct {
 // cfg.Output and returns the list of created paths, sorted for determinism.
 func Build(cfg Config) ([]string, error) {
 	if cfg.Input == "" {
-		cfg.Input = "."
+		cfg.Input = defaultInput
 	}
 	if cfg.Output == "" {
-		cfg.Output = ".krewire/build"
+		cfg.Output = defaultOutput
 	}
 	mount := normalizeBase(cfg.MountPath)
 	base := cfg.BasePath

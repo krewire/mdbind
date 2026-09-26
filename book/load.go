@@ -57,7 +57,7 @@ func LoadWithBase(input, title, author, base string) (*Book, error) {
 
 func loadWithRules(input, title, author, base string, include, exclude []string) (*Book, error) {
 	if input == "" {
-		input = "."
+		input = defaultInput
 	}
 	entries, err := os.ReadDir(input)
 	if err != nil {
