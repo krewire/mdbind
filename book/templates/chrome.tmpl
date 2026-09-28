@@ -73,7 +73,33 @@
       if(v==='0') g.classList.remove('open');
       if(v==='1') g.classList.add('open');
     });
-  }catch(_){}
+  // Automatic code block copy button
+  document.querySelectorAll('.chapter pre').forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    btn.innerHTML = '<span class="copy-txt">Copy</span>';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function(){
+          btn.innerHTML = '<span class="copy-txt copied">✓ Copied</span>';
+          setTimeout(function(){ btn.innerHTML = '<span class="copy-txt">Copy</span>'; }, 2000);
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.innerHTML = '<span class="copy-txt copied">✓ Copied</span>';
+        setTimeout(function(){ btn.innerHTML = '<span class="copy-txt">Copy</span>'; }, 2000);
+      }
+    });
+    pre.appendChild(btn);
+  });
 })();
 </script>
 {{end}}
