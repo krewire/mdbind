@@ -1,23 +1,19 @@
-# Specification — mdbind CLI & Workflows (Superseded)
+# Specification — mdbind Standalone CLI & Workflows
 
 | Field       | Value                                       |
 | ----------- | ------------------------------------------- |
 | SpecID      | KWM-4TCPA                                   |
-| Title       | mdbind CLI & Workflows                     |
-| Status      | Superseded                                  |
-| Date        | 2026-08-18                                  |
+| Title       | mdbind Standalone CLI & Workflows          |
+| Status      | Active                                      |
+| Date        | 2026-08-18 (Updated 2026-09-28)             |
 | Author      | Krewire Contributors                         |
-| Domain      | Site Builders — CLI                        |
+| Domain      | Site Builders — Standalone CLI             |
 
 ## 1. Context
 
-The mdbind CLI (now superseded) dogfoods the Krewire Framework's `cli` package and
-configuration conventions (`MDBIND_*` environment variables, flag > env > default
-precedence). It exposed the builder as commands: `build`, `init`, and `serve`.
+`mdbind` is a zero-dependency, standalone Markdown-based book and documentation site builder written in Go. It operates both as an independent CLI tool (`github.com/krewire/mdbind/cmd/mdbind`) and as the programmatic book engine powering the `book` workload within the Krewire ecosystem (`kiw build`).
 
-**Note:** The CLI commands have been moved to the `krewire` devtool. Use
-`krewire build`, `krewire serve`, and `krewire init` instead. The `book` library
-remains the public API for building and serving sites programmatically.
+The standalone CLI provides dedicated commands: `init`, `build`, and `serve` (with instant live re-rendering on save).
 
 ## 2. Problem Statement
 

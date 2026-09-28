@@ -6,7 +6,7 @@
     </button>
     <a class="brand" href="{{.BasePath}}">
       <span class="brand-mark">◈</span>
-      <span class="brand-text">Krewire</span>
+      <span class="brand-text">{{if .Book.Title}}{{.Book.Title}}{{else}}mdbind{{end}}</span>
       {{if .Version}}<span class="badge">{{.Version}}</span>{{end}}
     </a>
     {{range .NavLinks}}<a class="nav-link" href="{{.URL}}">{{.Text}}</a>{{end}}
@@ -82,7 +82,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>{{if .FooterText}}{{.FooterText}}{{else}}{{if .Book.Author}}&copy; {{.Book.Author}}{{end}}{{end}}</p>
-    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind">mdbind</a> and the <a href="https://github.com/krewire/framework">Krewire Framework</a>{{if .Version}} · v{{.Version}}{{end}}.</p>
+    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind" target="_blank" rel="noopener">mdbind</a>{{if .Version}} · v{{.Version}}{{end}}.</p>
   </div>
 </footer>
 {{end}}

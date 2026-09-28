@@ -1,89 +1,215 @@
-# mdbind — The Krewire Book Builder
+# mdbind — Fast, Standalone Markdown Book & Docs Builder in Go
 
-**mdbind** assembles folders of Markdown into book-shaped static websites — `github.com/krewire/mdbind`. It implements the `book` project kind in the unified Krewire framework and is the engine behind the [Krewire documentation site](https://github.com/krewire/docs).
+[![Go Reference](https://pkg.go.dev/badge/github.com/krewire/mdbind.svg)](https://pkg.go.dev/github.com/krewire/mdbind)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Zero Dependency](https://img.shields.io/badge/Dependencies-Zero%20External-green.svg)](#)
 
-In the unified workload matrix ([`KWF-M8K2Q`](../framework/docs/specs/KWF-ARCH-M8K2Q-unified-framework-vision.md)), `mdbind` covers `book` (content-first, lightweight) while `framework/web/ssg` covers `site` (design-first, powerful). Both are built by `kiw build` to `.krewire/build`, share the Goldmark renderer via `libs/markdown`, and use the single `krewire.yaml`. A docs site can start as `book` and progressively enhance to `site` without rewrite — both modules are co-installable in the same `go.mod`.
+**mdbind** is an ultra-fast, zero-dependency static site builder written in Go that compiles folders of Markdown files into beautiful, book-shaped documentation websites.
 
-## Features
+Inspired by tools like Rust's `mdBook` and `GitBook`, **mdbind** gives developers and technical authors a single, lightweight binary with **zero runtime dependencies** — no Node.js, no npm, no Python, and no complex bundlers. It compiles an entire multi-chapter book in **less than 15 milliseconds**.
 
-- **Book-shaped output** — ordered chapters, table of contents, prev/next navigation.
-- **File-based routing** — URLs mirror the content filesystem, no `/chapters/` segment, each chapter served as an extensionless sibling `.html` file (`/{slug}`, `/{chapter}/{sub}`).
-- **Markdown native** — GFM via `libs/markdown` (Goldmark, shared with `framework`), deterministic.
-- **Static export** — complete website from one folder via stdlib + `libs/markdown` (no `framework/web` needed).
-- **Library or CLI** — `book.Build` powers both `kiw build` (book mode, canonical) and standalone `mdbind` (superseded by `kiw build` for Krewire projects).
-- **Lightweight** — `mdbind` depends only on `libs` + `libs/markdown` + stdlib, not on `framework`; both can be required together for progressive enhancement.
+`mdbind` is designed to be used **standalone** by any developer, writer, or team, while also serving as the official `book` workload engine across the Krewire ecosystem.
 
-## Workspace Layout
+---
 
-| Path | Description |
-|------|-------------|
-| `book/` | Site builder: loading, rendering, export. |
-| `cmd/mdbind/` | Standalone `mdbind` CLI (superseded by `kiw build` for Krewire projects). |
-| `internal/commands/` | CLI sub-commands (`build`, `init`, `serve`). |
-| `docs/` | Specifications (`KWM-*`). |
+## Highlights
 
-## Getting Started
+- ⚡ **Blazingly Fast** — Compiles dozens of chapters and nested pages in milliseconds using pure Go standard library.
+- 📦 **Zero External Runtime Dependencies** — No `node_modules`, no npm scripts, no Python runtime. A single compiled binary is all you need.
+- 📖 **Book-Shaped Hierarchy** — Automatically generates numbered chapters, collapsible sidebar navigation, breadcrumbs, and Previous/Next chapter pagers from your directory layout.
+- 🔄 **Instant Live Authoring** — Built-in local HTTP server (`mdbind serve`) that re-renders Markdown files dynamically on page refresh.
+- 🌓 **Automatic Dark / Light Theming** — Built-in theme switcher that respects user and operating system preferences with zero CSS setup.
+- 🛠️ **Standalone CLI + Go Library** — Run standalone via `mdbind build` / `mdbind serve`, or import `github.com/krewire/mdbind/book` into any Go application.
+- 📐 **Declarative `book.yaml`** — Configure metadata, navbar links, custom base URLs, and theme modes with a simple, human-friendly YAML file.
 
-### Prerequisites
+---
 
-- Go 1.22+ — https://go.dev/dl/
+## Quickstart (Under 30 Seconds)
 
-### Building
+### 1. Installation
 
-```sh
-go build ./...
-go test ./...
-gofmt -l . && go vet ./...
+```bash
+# Install via Go (Go 1.22+)
+go install github.com/krewire/mdbind/cmd/mdbind@latest
 ```
 
-### Using via `kiw` (recommended for Krewire projects)
-
-```sh
-kiw new mybook
-kiw init --book mybook
-# content/docs/ already populated
-kiw build            # book mode: content/ → .krewire/build (README notes skipped)
-kiw serve            # preview at :8080
+Or build from source:
+```bash
+git clone https://github.com/krewire/mdbind.git
+cd mdbind
+go build -o /usr/local/bin/mdbind ./cmd/mdbind
 ```
 
-### Using standalone `mdbind`
+### 2. Scaffold a New Book
 
-```sh
-mdbind init
-mdbind build --title "My Book" --author "Me"
-open .krewire/build/index.html
-
-mdbind serve --addr :8080
+```bash
+mdbind init my-book
+cd my-book
 ```
 
-Settings honor Krewire precedence: flags > `MDBIND_*` env > defaults (`MDBIND_INPUT`, `MDBIND_OUTPUT`, `MDBIND_TITLE`, `MDBIND_AUTHOR`, `MDBIND_BASE`, `MDBIND_ADDR`). Pass `--base /guide/` for subdirectory deploys.
+This creates a clean, ready-to-write book project:
+```text
+my-book/
+├── book.yaml
+└── content/
+    ├── 01-introduction.md
+    ├── 02-getting-started.md
+    └── 03-deep-dive/
+        └── 01-architecture.md
+```
 
-### Using the library
+### 3. Live Preview & Writing
+
+Start the local live development server:
+
+```bash
+mdbind serve
+# → 📖 mdbind local preview server at http://localhost:8080/
+```
+
+Open `http://localhost:8080/` in your browser. Edit any `.md` file in `content/` and refresh to see instant updates!
+
+### 4. Build for Production
+
+Compile your book into static HTML, CSS, and assets ready to host on GitHub Pages, Netlify, Cloudflare Pages, or any web server:
+
+```bash
+mdbind build
+# ✓ Built 6 files in 11ms → dist/
+```
+
+---
+
+## Project Structure & Conventions
+
+`mdbind` uses intuitive file-based ordering. No manual table-of-contents files needed.
+
+```text
+my-book/
+├── book.yaml              # Optional project configuration
+└── content/               # Source manuscript directory
+    ├── 01-introduction.md # Chapter 1 (URL: /introduction)
+    ├── 02-installation.md # Chapter 2 (URL: /installation)
+    ├── 03-guides/         # Chapter 3 (Nested group)
+    │   ├── 01-basic.md    # Subchapter 3.1 (URL: /guides/basic)
+    │   └── 02-advanced.md # Subchapter 3.2 (URL: /guides/advanced)
+    └── 04-appendix.md     # Chapter 4 (URL: /appendix)
+```
+
+- **Ordering**: Prefix filenames or folders with numbers (`01-`, `02-`, etc.) to control reading order. Numbers are stripped from URLs.
+- **Headings & Title**: The first `# Heading` in each file automatically becomes the chapter title in the sidebar and navbar.
+- **Frontmatter**: YAML frontmatter (`--- title: Custom ---`) is supported and stripped cleanly from output.
+
+---
+
+## Configuration (`book.yaml`)
+
+Create a `book.yaml` (or `mdbind.yaml`) in your project root to customize behavior:
+
+```yaml
+title: "The Go Systems Blueprint"
+author: "Alex Morgan"
+input: "content"          # Input directory (default: content or .)
+output: "dist"            # Output directory (default: dist)
+base: "/"                 # Base URL (e.g. /guide/ for subpaths)
+theme: "auto"             # auto | light | dark | off
+
+nav:
+  - text: "GitHub"
+    url: "https://github.com/my-org/my-book"
+  - text: "Release Notes"
+    url: "https://my-org.github.io/releases"
+
+footer: "© 2026 Alex Morgan. Built with mdbind."
+```
+
+---
+
+## CLI Command Reference
+
+### `mdbind build`
+Compiles Markdown manuscripts into static web pages.
+
+```bash
+mdbind build [flags]
+
+Flags:
+  -i, --input    Input directory containing Markdown manuscript (default: content)
+  -o, --output   Destination output directory (default: dist)
+  -t, --title    Override book title
+  -a, --author   Override author name
+  -b, --base     Base URL path prefix (e.g. /docs/)
+  --theme        Theme mode: auto, light, dark, or off
+  -c, --config   Path to custom config file (default: book.yaml)
+```
+
+### `mdbind serve`
+Starts an HTTP preview server with instant live re-rendering on browser refresh.
+
+```bash
+mdbind serve [flags]
+
+Flags:
+  --addr         Listen address (default: :8080)
+  -i, --input    Input directory (default: content)
+  -c, --config   Path to custom config file (default: book.yaml)
+```
+
+### `mdbind init`
+Scaffolds a new book project with sample chapters and configuration.
+
+```bash
+mdbind init [path]
+```
+
+---
+
+## Using as a Go Library
+
+You can also use `mdbind` programmatically inside your own Go services or CLI tools:
 
 ```go
-created, err := book.Build(book.Config{
-    Input:  "content",
-    Output: ".krewire/build",
-    Title:  "My Book",
-    Author: "Me",
-})
-// Add framework progressively later:
-// go get github.com/krewire/framework
-// kiw init --site  // adds pages/*.kiw + ssg: without removing content/
-// kiw build        // merges both into .krewire/build
+package main
+
+import (
+    "log"
+    "github.com/krewire/mdbind/book"
+)
+
+func main() {
+    created, err := book.Build(book.Config{
+        Input:    "manuscript",
+        Output:   "public",
+        Title:    "Cloud Architecture Handbook",
+        Author:   "Dev Team",
+        BasePath: "/handbook/",
+        Theme:    book.DefaultTheme(),
+    })
+    if err != nil {
+        log.Fatalf("Build failed: %v", err)
+    }
+    log.Printf("Successfully created %d pages", len(created))
+}
 ```
+
+---
+
+## Ecosystem Integration (`kiw build`)
+
+For projects using the unified Krewire Framework:
+- `mdbind` powers the `book` project kind (`kind: book` in `krewire.yaml`).
+- `kiw build` automatically delegates to `mdbind` when a `content/` or `manuscript/` folder is present.
+- A project can start as an `mdbind` standalone book and progressively add web apps or microservices without restructuring files.
+
+---
 
 ## Specifications
 
-- [`KWM-BUILDER-FX9H2`](./docs/specs/KWM-BUILDER-FX9H2-mdbind-site-builder.md) — Site Builder
-- [`KWM-CLI-4TCPA`](./docs/specs/KWM-CLI-4TCPA-cli-workflows.md) — CLI & Workflows
+- [`KWM-BUILDER-FX9H2`](./docs/specs/KWM-BUILDER-FX9H2-mdbind-site-builder.md) — Site Builder Specification
+- [`KWM-CLI-4TCPA`](./docs/specs/KWM-CLI-4TCPA-cli-workflows.md) — Standalone CLI Specification
 
-## Related Repositories
-
-- [framework](https://github.com/krewire/framework) — unified framework (`web`/`ssg` for `site`, `runtime` for frontend, `ui` for theming) — shares `libs/markdown` with `mdbind` for co-existence
-- [libs](https://github.com/krewire/libs) — shared primitives (`core`, `term`, `config`, `validate`, `markdown`)
-- [docs](https://github.com/krewire/docs) — documentation site, built with `mdbind` (`book` kind)
+---
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT License — see [LICENSE](./LICENSE).

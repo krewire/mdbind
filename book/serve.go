@@ -3,6 +3,7 @@ package book
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
 // Handler returns an http.Handler that serves the book's pages and assets
@@ -52,5 +53,74 @@ func Serve(b *Book, addr string) error {
 		return err
 	}
 	slog.Info("serving book", "addr", addr)
+	return http.ListenAndServe(addr, h)
+}
+
+// LiveHandler returns an http.Handler that re-reads Markdown files on every
+// request during local development, providing instant updates without server restarts.
+func LiveHandler(cfg Config) http.Handler {
+	css := Assets()["assets/mdbind.css"]
+	mount := normalizeBase(cfg.MountPath)
+	mountPrefix := strings.TrimSuffix(mount, "/")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cssPath := "/assets/mdbind.css"
+		if mountPrefix != "" {
+			cssPath = "/" + mountPrefix + "/assets/mdbind.css"
+		}
+		if r.URL.Path == cssPath {
+			w.Header().Set("Content-Type", "text/css; charset=utf-8")
+			_, _ = w.Write([]byte(css))
+			return
+		}
+
+		// Rebuild in-memory book representation
+		base := cfg.BasePath
+		if mount != "/" && (base == "" || base == "/") {
+			base = mount
+		}
+		input := cfg.Input
+		if input == "" {
+			input = "."
+		}
+		b, err := loadWithRules(input, cfg.Title, cfg.Author, base, cfg.Include, cfg.Exclude)
+		if err != nil {
+			http.Error(w, "500 — error loading manuscript: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		b.mount = mountPrefix
+		b.noRootTOC = cfg.NoRootTOC
+		b.version = cfg.Version
+		b.WithChrome(cfg.NavLinks, cfg.FooterText)
+		if cfg.Theme != nil {
+			b.WithTheme(cfg.Theme)
+		}
+
+		pages, err := b.Pages()
+		if err != nil {
+			http.Error(w, "500 — error rendering pages: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		for _, p := range pages {
+			route := p.Path
+			if b.mount != "" {
+				route = "/" + b.mount + p.Path
+			}
+			if r.URL.Path == route {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				_ = p.Render(w)
+				return
+			}
+		}
+
+		http.Error(w, "404 — page not found", http.StatusNotFound)
+	})
+}
+
+// ServeConfig serves the book using live loading on addr.
+func ServeConfig(cfg Config, addr string) error {
+	h := LiveHandler(cfg)
+	slog.Info("serving live book", "addr", addr)
 	return http.ListenAndServe(addr, h)
 }

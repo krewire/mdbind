@@ -129,6 +129,15 @@ type Theme struct {
 	Dark       Palette
 }
 
+// DefaultTheme returns a Theme configured for automatic light/dark switching.
+func DefaultTheme() *Theme {
+	return &Theme{
+		Default: "auto",
+		Light:   DefaultLightPalette,
+		Dark:    DefaultDarkPalette,
+	}
+}
+
 func (t Theme) storageKey() string {
 	if t.StorageKey == "" {
 		return defaultThemeKey
