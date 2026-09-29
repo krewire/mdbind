@@ -58,6 +58,14 @@ func (b *Book) Pages() ([]Page, error) {
 				return tpls.ExecuteTemplate(w, "chapter.tmpl", data)
 			},
 		})
+		if len(ch.Subs) > 0 {
+			pages = append(pages, Page{
+				Path: ch.Path() + "/index",
+				Render: func(w io.Writer) error {
+					return tpls.ExecuteTemplate(w, "chapter.tmpl", data)
+				},
+			})
+		}
 	}
 	return pages, nil
 }
@@ -116,6 +124,10 @@ func (b *Book) chapterList(active *Chapter) []tocEntry {
 
 // pageData assembles the shared template payload for a page.
 func (b *Book) pageData(ch *Chapter, toc []tocEntry) pageData {
+	version := b.version
+	if version != "" {
+		version = "v" + strings.TrimPrefix(version, "v")
+	}
 	return pageData{
 		BasePath:   b.base,
 		Book:       b,
@@ -123,7 +135,7 @@ func (b *Book) pageData(ch *Chapter, toc []tocEntry) pageData {
 		Toc:        toc,
 		NavLinks:   b.navLinks,
 		FooterText: b.footerText,
-		Version:    b.version,
+		Version:    version,
 		Theme:      b.theme,
 	}
 }
@@ -194,6 +206,9 @@ func (b *Book) createdPaths(outDir string) []string {
 	for _, ch := range b.flattened() {
 		rel := strings.TrimPrefix(ch.Path(), "/")
 		paths = append(paths, filepath.Join(baseOut, filepath.FromSlash(rel)+".html"))
+		if len(ch.Subs) > 0 {
+			paths = append(paths, filepath.Join(baseOut, filepath.FromSlash(rel), "index.html"))
+		}
 	}
 	sort.Strings(paths)
 	return paths

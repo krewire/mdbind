@@ -18,25 +18,37 @@
 {{define "sidebar"}}
 <aside class="sidebar" id="sidebar" aria-label="Table of contents">
   <div class="sidebar-head">
-    <p class="sidebar-title">Contents</p>
-    <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">×</button>
+    <div class="sidebar-head-title">
+      <p class="sidebar-title">Contents</p>
+    </div>
+    <div class="sidebar-head-actions">
+      <button class="toc-action-btn" id="toc-toggle-all" aria-label="Toggle all chapters" title="Expand / collapse all">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/><path d="M4 10l4 4 4-4"/></svg>
+      </button>
+      <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">×</button>
+    </div>
   </div>
-  <nav class="toc">
+  <div class="sidebar-search">
+    <svg class="search-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    <input type="search" id="toc-search" class="toc-search-input" placeholder="Filter chapters..." aria-label="Filter chapters" autocomplete="off" spellcheck="false">
+    <button type="button" id="toc-search-clear" class="toc-search-clear" aria-label="Clear filter" style="display:none">×</button>
+  </div>
+  <nav class="toc" id="sidebar-toc">
     {{range .Toc}}
       {{if .HasSubs}}
       <div class="toc-group{{if .Open}} open{{end}}" data-group>
         <div class="toc-parent-row">
-          <a href="{{.Link}}" class="toc-link{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>
+          <a href="{{.Link}}" class="toc-link{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> <span class="toc-text">{{.Title}}</span></a>
           <button class="toc-toggle" aria-expanded="{{if .Open}}true{{else}}false{{end}}" aria-label="Toggle submenu for {{.Title}}">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
           </button>
         </div>
         <div class="toc-subs">
-          {{range .Subs}}<a href="{{.Link}}" class="toc-sub{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>{{end}}
+          {{range .Subs}}<a href="{{.Link}}" class="toc-sub{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> <span class="toc-text">{{.Title}}</span></a>{{end}}
         </div>
       </div>
       {{else}}
-      <a href="{{.Link}}" class="toc-link{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> {{.Title}}</a>
+      <a href="{{.Link}}" class="toc-link{{if .Active}} active{{end}}"><span class="num">{{.Label}}</span> <span class="toc-text">{{.Title}}</span></a>
       {{end}}
     {{end}}
   </nav>
@@ -57,22 +69,111 @@
   if(close) close.addEventListener('click', function(){ setOpen(false); });
   if(overlay) overlay.addEventListener('click', function(){ setOpen(false); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') setOpen(false); });
+
+  // 1. Collapsible toggle per group
   document.querySelectorAll('[data-group] .toc-toggle').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.preventDefault();
+      e.stopPropagation();
       var g=btn.closest('[data-group]');
       var open=g.classList.toggle('open');
       btn.setAttribute('aria-expanded', open?'true':'false');
       try{ localStorage.setItem('krewire-toc-'+g.querySelector('.toc-link').getAttribute('href'), open?'1':'0'); }catch(_){}
     });
   });
+
+  // 2. Restore state from localStorage while keeping active group open
   try{
     document.querySelectorAll('[data-group]').forEach(function(g){
+      if(g.querySelector('.active')){
+        g.classList.add('open');
+        g.classList.add('has-active');
+        var b=g.querySelector('.toc-toggle');
+        if(b) b.setAttribute('aria-expanded', 'true');
+        return;
+      }
       var href=g.querySelector('.toc-link').getAttribute('href');
       var v=localStorage.getItem('krewire-toc-'+href);
-      if(v==='0') g.classList.remove('open');
-      if(v==='1') g.classList.add('open');
+      if(v==='0'){
+        g.classList.remove('open');
+        var b=g.querySelector('.toc-toggle');
+        if(b) b.setAttribute('aria-expanded', 'false');
+      }
+      if(v==='1'){
+        g.classList.add('open');
+        var b=g.querySelector('.toc-toggle');
+        if(b) b.setAttribute('aria-expanded', 'true');
+      }
     });
+  }catch(_){}
+
+  // 3. Expand / Collapse All
+  var toggleAll=document.getElementById('toc-toggle-all');
+  if(toggleAll){
+    toggleAll.addEventListener('click', function(){
+      var groups=document.querySelectorAll('[data-group]');
+      var anyClosed=Array.from(groups).some(function(g){ return !g.classList.contains('open'); });
+      groups.forEach(function(g){
+        g.classList.toggle('open', anyClosed);
+        var b=g.querySelector('.toc-toggle');
+        if(b) b.setAttribute('aria-expanded', anyClosed?'true':'false');
+        try{ localStorage.setItem('krewire-toc-'+g.querySelector('.toc-link').getAttribute('href'), anyClosed?'1':'0'); }catch(_){}
+      });
+    });
+  }
+
+  // 4. Quick filter input for TOC items
+  var searchInput=document.getElementById('toc-search');
+  var searchClear=document.getElementById('toc-search-clear');
+  if(searchInput){
+    searchInput.addEventListener('input', function(){
+      var q=searchInput.value.trim().toLowerCase();
+      if(searchClear) searchClear.style.display=q?'inline-flex':'none';
+      document.querySelectorAll('#sidebar-toc > *').forEach(function(el){
+        if(!q){
+          el.style.display='';
+          if(el.hasAttribute('data-group')){
+            el.querySelectorAll('.toc-sub').forEach(function(s){ s.style.display=''; });
+            var href=el.querySelector('.toc-link').getAttribute('href');
+            var v=localStorage.getItem('krewire-toc-'+href);
+            var hasActive=el.querySelector('.active');
+            var open=hasActive||v==='1'||(v!=='0'&&el.classList.contains('open'));
+            el.classList.toggle('open', !!open);
+            var b=el.querySelector('.toc-toggle');
+            if(b) b.setAttribute('aria-expanded', open?'true':'false');
+          }
+          return;
+        }
+        if(el.hasAttribute('data-group')){
+          var parentMatch=(el.querySelector('.toc-link').textContent||'').toLowerCase().indexOf(q)!==-1;
+          var subMatches=0;
+          el.querySelectorAll('.toc-sub').forEach(function(s){
+            var m=(s.textContent||'').toLowerCase().indexOf(q)!==-1;
+            s.style.display=(m||parentMatch)?'':'none';
+            if(m) subMatches++;
+          });
+          if(parentMatch||subMatches>0){
+            el.style.display='';
+            el.classList.add('open');
+            var b=el.querySelector('.toc-toggle');
+            if(b) b.setAttribute('aria-expanded', 'true');
+          }else{
+            el.style.display='none';
+          }
+        }else{
+          var match=(el.textContent||'').toLowerCase().indexOf(q)!==-1;
+          el.style.display=match?'':'none';
+        }
+      });
+    });
+    if(searchClear){
+      searchClear.addEventListener('click', function(){
+        searchInput.value='';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+      });
+    }
+  }
   // Automatic code block copy button
   document.querySelectorAll('.chapter pre').forEach(function(pre){
     var btn = document.createElement('button');
@@ -108,7 +209,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>{{if .FooterText}}{{.FooterText}}{{else}}{{if .Book.Author}}&copy; {{.Book.Author}}{{end}}{{end}}</p>
-    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind" target="_blank" rel="noopener">mdbind</a>{{if .Version}} · v{{.Version}}{{end}}.</p>
+    <p class="built-with">Built with <a href="https://github.com/krewire/mdbind" target="_blank" rel="noopener">mdbind</a> and the <a href="https://github.com/krewire/framework" target="_blank" rel="noopener">Krewire Framework</a>{{if .Version}} · {{.Version}}{{end}}.</p>
   </div>
 </footer>
 {{end}}
