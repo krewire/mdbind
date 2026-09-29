@@ -29,9 +29,15 @@
     </div>
   </div>
   <div class="sidebar-search">
-    <svg class="search-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    <span class="search-icon-box" aria-hidden="true">
+      <svg class="search-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    </span>
     <input type="search" id="toc-search" class="toc-search-input" placeholder="Filter chapters..." aria-label="Filter chapters" autocomplete="off" spellcheck="false">
-    <button type="button" id="toc-search-clear" class="toc-search-clear" aria-label="Clear filter" style="display:none">×</button>
+    <kbd class="toc-search-kbd" id="toc-search-kbd" title="Press '/' to filter" aria-hidden="true">/</kbd>
+    <button type="button" id="toc-search-clear" class="toc-search-clear" aria-label="Clear filter" title="Clear filter" style="display:none">×</button>
+  </div>
+  <div class="toc-no-results" id="toc-no-results" style="display:none" aria-live="polite">
+    <span>◈ No matching chapters</span>
   </div>
   <nav class="toc" id="sidebar-toc">
     {{range .Toc}}
@@ -125,10 +131,14 @@
   // 4. Quick filter input for TOC items
   var searchInput=document.getElementById('toc-search');
   var searchClear=document.getElementById('toc-search-clear');
+  var searchKbd=document.getElementById('toc-search-kbd');
+  var noResults=document.getElementById('toc-no-results');
   if(searchInput){
     searchInput.addEventListener('input', function(){
       var q=searchInput.value.trim().toLowerCase();
       if(searchClear) searchClear.style.display=q?'inline-flex':'none';
+      if(searchKbd) searchKbd.style.display=q?'none':'';
+      var matchCount=0;
       document.querySelectorAll('#sidebar-toc > *').forEach(function(el){
         if(!q){
           el.style.display='';
@@ -157,14 +167,19 @@
             el.classList.add('open');
             var b=el.querySelector('.toc-toggle');
             if(b) b.setAttribute('aria-expanded', 'true');
+            matchCount += (parentMatch ? 1 : 0) + subMatches;
           }else{
             el.style.display='none';
           }
         }else{
           var match=(el.textContent||'').toLowerCase().indexOf(q)!==-1;
           el.style.display=match?'':'none';
+          if(match) matchCount++;
         }
       });
+      if(noResults){
+        noResults.style.display=(q && matchCount===0)?'block':'none';
+      }
     });
     if(searchClear){
       searchClear.addEventListener('click', function(){
@@ -173,6 +188,27 @@
         searchInput.focus();
       });
     }
+    // Global hotkey: '/' to focus filter
+    document.addEventListener('keydown', function(e){
+      var tag=(e.target&&e.target.tagName)||'';
+      if(tag==='INPUT'||tag==='TEXTAREA'||(e.target&&e.target.isContentEditable)) return;
+      if(e.key==='/' && !e.ctrlKey && !e.metaKey && !e.altKey){
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+    });
+    // Escape to clear & blur
+    searchInput.addEventListener('keydown', function(e){
+      if(e.key==='Escape'){
+        if(searchInput.value){
+          searchInput.value='';
+          searchInput.dispatchEvent(new Event('input'));
+        }else{
+          searchInput.blur();
+        }
+      }
+    });
   }
   // Automatic code block copy button
   document.querySelectorAll('.chapter pre').forEach(function(pre){
