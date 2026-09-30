@@ -37,7 +37,7 @@ with `krewire/docs+app -> mdbind + framework` converging on `libs/markdown`.
 
 - Module root `github.com/krewire/mdbind`; public `book` package for site generation.
 - Built on `github.com/krewire/libs` (`libs/markdown` for Goldmark GFM) and stdlib (`net/http`, `html/template`, `os`), **no `framework/web` or `framework/ui`** in public API.
-- Markdown rendering through `libs/markdown` (Goldmark GFM + AutoHeadingID + base-path `PrefixLinks`), shared with `framework/web/ssg` and `framework/dsl`.
+- Markdown rendering through `libs/markdown` (Goldmark GFM + AutoHeadingID + base-path `PrefixLinks`), shared with `framework/web/ssg` and `kiw/dsl`.
 - Public `book.Theme`/`book.Palette` mirrors `framework/ui.Theme` shape but lives locally, so `framework` is not pulled when only `mdbind` is needed.
 - Default output `.krewire/build` (aligned with `kiw` `config.DefaultOutput`).
 
