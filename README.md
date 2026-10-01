@@ -29,7 +29,7 @@ Inspired by tools like Rust's `mdBook` and `GitBook`, **mdbind** gives developer
 ### 1. Installation
 
 ```bash
-# Install via Go (Go 1.26+)
+# Install via Go (Go 1.27.1+)
 go install github.com/krewire/mdbind/cmd/mdbind@latest
 ```
 
