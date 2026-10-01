@@ -137,7 +137,20 @@ func (b *Book) pageData(ch *Chapter, toc []tocEntry) pageData {
 		FooterText: b.footerText,
 		Version:    version,
 		Theme:      b.theme,
+		Stylesheet: b.stylesheetURL(version),
 	}
+}
+
+// stylesheetURL is the URL of the book's own stylesheet, carrying the same
+// cache-busting query the host site uses. Without it this one asset would be
+// the only unversioned stylesheet on the page, so a reader could keep a stale
+// book stylesheet after a release while every other asset refreshes.
+func (b *Book) stylesheetURL(version string) string {
+	u := b.base + StylesheetName
+	if version == "" {
+		return u
+	}
+	return u + "?v=" + strings.TrimPrefix(version, "v")
 }
 
 // autoSubList renders the auto-generated chapter page for a directory without
@@ -202,7 +215,7 @@ func (b *Book) createdPaths(outDir string) []string {
 	if !b.noRootTOC {
 		paths = append(paths, filepath.Join(baseOut, "index.html"))
 	}
-	paths = append(paths, filepath.Join(baseOut, "assets", "mdbind.css"))
+	paths = append(paths, filepath.Join(baseOut, StylesheetName))
 	for _, ch := range b.flattened() {
 		rel := strings.TrimPrefix(ch.Path(), "/")
 		paths = append(paths, filepath.Join(baseOut, filepath.FromSlash(rel)+".html"))
@@ -229,6 +242,10 @@ type pageData struct {
 	FooterText string
 	Version    string
 	Theme      *Theme
+	// Stylesheet is the full URL of the book's own stylesheet, including the
+	// cache-busting query. Templates link this instead of assembling the path
+	// from BasePath and the file name, so the name has a single owner.
+	Stylesheet string
 }
 
 // tocEntry is one row in the sidebar chapter list. HasSubs indicates a

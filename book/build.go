@@ -13,6 +13,12 @@ const (
 )
 
 // Config configures a build.
+// StylesheetName is the output path of the stylesheet this package emits for
+// every book page. A host that renders a book into a directory it shares with a
+// site (see Config.ExtraCSS) must not also link this file from the site's own
+// asset plan, or the page would load it twice.
+const StylesheetName = "assets/mdbind.css"
+
 type Config struct {
 	// Title is the book title.
 	Title string
@@ -54,6 +60,15 @@ type Config struct {
 	Version string
 	// Theme, when non-nil, enables the light/dark theme switcher on every page.
 	Theme *Theme
+	// ExtraCSS are additional stylesheet URLs linked after mdbind.css on every
+	// page, in the given order. It lets a book rendered into a shared output
+	// adopt the parent site's stylesheets (e.g. tailwind.css, theme.css) so a
+	// hybrid site looks identical whether the visitor lands on a landing page
+	// or a docs page. Entries are used verbatim, so callers pass a full URL.
+	ExtraCSS []string
+	// ExtraJS are additional script URLs loaded at the end of <body> on every
+	// page, in the given order. Used verbatim like ExtraCSS.
+	ExtraJS []string
 }
 
 // Build renders the manuscript in cfg.Input into a static website in
@@ -78,6 +93,8 @@ func Build(cfg Config) ([]string, error) {
 	}
 	b.mount = strings.TrimSuffix(mount, "/")
 	b.noRootTOC = cfg.NoRootTOC
+	b.extraCSS = append([]string(nil), cfg.ExtraCSS...)
+	b.extraJS = append([]string(nil), cfg.ExtraJS...)
 	b.version = cfg.Version
 	b.WithChrome(cfg.NavLinks, cfg.FooterText)
 	if cfg.Theme != nil {

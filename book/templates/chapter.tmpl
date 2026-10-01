@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>{{.Chapter.Title}} — {{.Book.Title}}</title>
-<link rel="stylesheet" href="{{.BasePath}}assets/mdbind.css">
-{{if .Theme}}{{.Theme.Script}}{{end}}
-</head>
+{{range .Book.ExtraCSS}}<link rel="stylesheet" href="{{.}}">
+{{end}}<link rel="stylesheet" href="{{.Stylesheet}}">
+{{if .Theme}}{{.Theme.Script}}{{end}}</head>
 <body>
 {{template "navbar" .}}
 <div class="layout">
@@ -26,5 +26,6 @@
   </main>
 </div>
 {{template "footer" .}}
-</body>
+{{range .Book.ExtraJS}}<script src="{{.}}"></script>
+{{end}}</body>
 </html>

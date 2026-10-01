@@ -36,7 +36,21 @@ type Book struct {
 	// one output with an ssg site whose landing page owns "/". Set via
 	// Config.NoRootTOC.
 	noRootTOC bool
+	// extraCSS holds additional stylesheet URLs linked after mdbind.css on
+	// every page. Set from Config.ExtraCSS.
+	extraCSS []string
+	// extraJS holds additional script URLs loaded at the end of body on every
+	// page. Set from Config.ExtraJS.
+	extraJS []string
 }
+
+// ExtraCSS returns the additional stylesheet URLs linked after mdbind.css on
+// every page. Templates read it through pageData.
+func (b *Book) ExtraCSS() []string { return b.extraCSS }
+
+// ExtraJS returns the additional script URLs loaded at the end of body on every
+// page. Templates read it through pageData.
+func (b *Book) ExtraJS() []string { return b.extraJS }
 
 // Link is a named navigation target shown in the navbar.
 type Link struct {
