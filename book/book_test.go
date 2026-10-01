@@ -283,6 +283,75 @@ func TestBuildWithBasePath(t *testing.T) {
 	}
 }
 
+// The book's own stylesheet must carry the same cache-busting query the host
+// site uses. Without it, mdbind.css would be the only unversioned stylesheet
+// on a page whose other assets all refresh on release.
+func TestBuildVersionsItsStylesheet(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-one.md": "# One\n"})
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(Config{Input: dir, Output: out, Title: "B", Version: "0.1.0"}); err != nil {
+		t.Fatal(err)
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(index), `href="/assets/mdbind.css?v=0.1.0"`) {
+		t.Errorf("index.html does not version its stylesheet:\n%s", index)
+	}
+
+	chapter, err := os.ReadFile(filepath.Join(out, "one.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(chapter), `href="/assets/mdbind.css?v=0.1.0"`) {
+		t.Errorf("chapter does not version its stylesheet:\n%s", chapter)
+	}
+}
+
+// A declared version may already carry the "v" prefix; the query must not
+// double it, and the rendered credit line must show one "v".
+func TestBuildStylesheetVersionToleratesVPrefix(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-one.md": "# One\n"})
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(Config{Input: dir, Output: out, Title: "B", Version: "v1.2.3"}); err != nil {
+		t.Fatal(err)
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(index)
+	if !strings.Contains(got, `href="/assets/mdbind.css?v=1.2.3"`) {
+		t.Errorf("stylesheet query = wrong form:\n%s", got)
+	}
+	if strings.Contains(got, "vv") {
+		t.Error("version must not render a doubled v prefix")
+	}
+}
+
+// A book rendered without a version must not invent a cache-busting query.
+func TestBuildWithoutVersionLeavesStylesheetUnversioned(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{"01-one.md": "# One\n"})
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(Config{Input: dir, Output: out, Title: "B"}); err != nil {
+		t.Fatal(err)
+	}
+
+	index, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(index), `href="/assets/mdbind.css"`) {
+		t.Errorf("index.html missing the plain stylesheet link:\n%s", index)
+	}
+	if strings.Contains(string(index), "mdbind.css?") {
+		t.Error("no version was declared, so the query must be absent")
+	}
+}
+
 func TestBuildWithMountPath(t *testing.T) {
 	dir := writeManuscript(t, map[string]string{
 		"01-one.md": "# One\n\nSee the [next](/two) chapter.\n",
