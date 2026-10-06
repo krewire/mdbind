@@ -1,12 +1,16 @@
 package mdbind
 
-import "github.com/krewire/libs/core"
+import "github.com/krewire/krewire/packages/kern"
 
 // Version is the mdbind module version.
-var Version = core.MustParseVersion("0.1.0")
+var Version = kern.MustParseVersion("0.1.0")
 
-// EcosystemRequires declares the minimum versions of the modules mdbind depends on.
-// mdbind depends only on libs (libs/markdown), not on framework/web.
-var EcosystemRequires = map[core.ModuleName]core.Version{
-	core.ModuleLibs: core.MustParseVersion("0.1.0"),
+// EcosystemRequires declares the minimum version of each Krewire module this one
+// was built against. mdbind uses the Markdown renderer from libs, so it depends
+// on the kernel directly and on libs.
+//
+// The kernel names no modules, so this module states its dependencies by name.
+var EcosystemRequires = map[string]kern.Version{
+	"kern": kern.MustParseVersion("0.1.0"),
+	"libs": kern.MustParseVersion("0.1.0"),
 }

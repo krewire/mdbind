@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/krewire/libs/config"
+	"github.com/krewire/krewire/packages/config"
 )
 
 // BookConfigFile represents the configuration file schema for standalone books
