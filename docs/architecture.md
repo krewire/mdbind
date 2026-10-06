@@ -15,11 +15,11 @@ mdbind/
 
 **Design decisions:**
 
-- **Book = one workload of the unified matrix.** `site` (`framework/web/ssg`, design-first) and `book` (`mdbind`, content-first) are siblings, both driven by `kiw build` to `.krewire/build`; `docs` is a `book` showcase that can progressively add `site`.
+- **Book = one workload of the unified matrix.** `site` (`packages/web/ssg`, design-first) and `book` (`mdbind`, content-first) are siblings, both driven by `kiw build` to `.krewire/build`; `docs` is a `book` showcase that can progressively add `site`.
 - **File-based routing.** URLs mirror `content/` filesystem, no `/chapters/` segment; every route is extensionless and maps one-to-one onto a sibling `.html` file.
-- **Library + CLI.** `book.Build(Config{Input, Output, Title, Author})` powers both `kiw build` (book mode) and standalone `mdbind`; local `book.Theme` avoids `framework/ui` leakage so both modules co-exist.
-- **Shared Markdown.** Both `mdbind` and `framework` use `libs/markdown` (Goldmark GFM + `PrefixLinks`); no duplicate parsers, no `gomarkdown` divergence.
-- **Progressive.** A project may `require mdbind` + `require framework` and have both `content/` and `pages/*.kiw`/`ssg:` — `kiw build` merges both into the same output.
+- **Library + CLI.** `book.Build(Config{Input, Output, Title, Author})` powers both `kiw build` (book mode) and standalone `mdbind`; local `book.Theme` avoids leakage so both modules co-exist.
+- **Shared Markdown.** Both `mdbind` and Krewire packages use `packages/markdown` (Goldmark GFM + `PrefixLinks`); no duplicate parsers.
+- **Progressive.** A project may use `mdbind` and have both `content/` and `pages/*.kiw`/`ssg:` — `kiw build` merges both into the same output.
 
 
 ## Conventions

@@ -5,6 +5,9 @@ import "github.com/krewire/krewire/packages/kern"
 // Version is the mdbind module version.
 var Version = kern.MustParseVersion("0.1.0")
 
+// Tier is the ecosystem tier assigned to the mdbind repository.
+var Tier = kern.TierFree
+
 // EcosystemRequires declares the minimum version of each Krewire module this one
 // was built against. mdbind uses the Markdown renderer from libs, so it depends
 // on the kernel directly and on libs.
