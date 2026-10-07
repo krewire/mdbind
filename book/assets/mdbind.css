@@ -699,7 +699,8 @@ body {
 }
 
 /* ── Content & Reader ─────────────────────────────────────────────────────── */
-main {
+.layout > main,
+.layout main {
   min-width: 0;
   max-width: 52rem;
 }
