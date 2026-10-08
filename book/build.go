@@ -52,6 +52,9 @@ type Config struct {
 	Exclude []string
 	// NavLinks are optional extra links rendered in the navbar.
 	NavLinks []Link
+	// HomeURL is the optional URL the brand logo links to; defaults to "/"
+	// when MountPath is set, or BasePath otherwise.
+	HomeURL string
 	// FooterText is optional text shown in the footer; when empty the footer
 	// shows the author copyright instead.
 	FooterText string
@@ -92,6 +95,15 @@ func Build(cfg Config) ([]string, error) {
 		return nil, err
 	}
 	b.mount = strings.TrimSuffix(mount, "/")
+	homeURL := cfg.HomeURL
+	if homeURL == "" {
+		if b.mount != "" {
+			homeURL = "/"
+		} else {
+			homeURL = b.base
+		}
+	}
+	b.homeURL = homeURL
 	b.noRootTOC = cfg.NoRootTOC
 	b.extraCSS = append([]string(nil), cfg.ExtraCSS...)
 	b.extraJS = append([]string(nil), cfg.ExtraJS...)

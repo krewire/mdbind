@@ -24,6 +24,8 @@ type Book struct {
 	// mount is the export sub-path ("", "docs", …) prefixed to every exported
 	// page path; it mirrors base without the trailing slash.
 	mount string
+	// homeURL is the URL the brand links to; defaults to "/" when mounted or base.
+	homeURL string
 	// navLinks holds optional navbar links.
 	navLinks []Link
 	// footerText holds optional footer text.

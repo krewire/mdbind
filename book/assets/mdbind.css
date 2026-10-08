@@ -251,6 +251,62 @@ body {
   color: var(--primary);
 }
 
+.topbar .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar nav a.nav-link.nav-link-github {
+  background: var(--primary);
+  color: var(--primary-content);
+  border: var(--pop-border-thin);
+  box-shadow: var(--pop-shadow-sm);
+  padding: 4px 11px;
+  border-radius: 6px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar nav a.nav-link.nav-link-github:hover {
+  background: var(--primary);
+  color: var(--primary-content);
+  transform: translate(-1px, -1px);
+}
+
+.topbar .lang-switch {
+  border: var(--pop-border-thin);
+  box-shadow: var(--pop-shadow-sm);
+  border-radius: 8px;
+  background: var(--base-2);
+  color: var(--ink);
+  padding: 0.35rem 0.65rem;
+  line-height: 1;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.topbar .lang-switch:hover {
+  background: var(--base-3);
+  transform: translate(-1px, -1px);
+}
+
 /* Sidebar Hamburger Toggle */
 .sidebar-toggle {
   display: inline-flex;
@@ -275,7 +331,6 @@ body {
 
 /* Theme Toggle Button */
 .theme-toggle {
-  margin-left: auto;
   width: 36px;
   height: 36px;
   border: var(--pop-border-thin);
@@ -1053,6 +1108,10 @@ nav.pager a.next::before {
 @media (max-width: 63.99rem) {
   .sidebar-toggle {
     display: inline-flex !important;
+  }
+
+  .topbar .nav-links {
+    display: none !important;
   }
 
   .sidebar {

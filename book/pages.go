@@ -138,8 +138,17 @@ func (b *Book) pageData(ch *Chapter, toc []tocEntry) pageData {
 	if version != "" {
 		version = "v" + strings.TrimPrefix(version, "v")
 	}
+	homeURL := b.homeURL
+	if homeURL == "" {
+		if b.mount != "" {
+			homeURL = "/"
+		} else {
+			homeURL = b.base
+		}
+	}
 	return pageData{
 		BasePath:   b.base,
+		HomeURL:    homeURL,
 		Book:       b,
 		Chapter:    ch,
 		Toc:        toc,
@@ -240,6 +249,7 @@ func (b *Book) createdPaths(outDir string) []string {
 // pageData is the payload for the index and chapter page templates.
 type pageData struct {
 	BasePath   string
+	HomeURL    string
 	Book       *Book
 	Chapter    *Chapter
 	Toc        []tocEntry
