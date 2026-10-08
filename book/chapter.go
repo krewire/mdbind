@@ -24,6 +24,9 @@ type Chapter struct {
 	// Prev and Next point to adjacent pages in reading order.
 	Prev *Chapter
 	Next *Chapter
+	// CustomPrev and CustomNext hold explicit frontmatter next/back overrides.
+	CustomPrev string
+	CustomNext string
 	// Subs holds the chapter's subchapters in reading order; empty for a
 	// plain chapter.
 	Subs []*Chapter
@@ -38,6 +41,9 @@ type Chapter struct {
 func (c Chapter) Path() string {
 	if c.Parent != nil {
 		return "/" + c.Parent.Slug + "/" + c.Slug
+	}
+	if c.Slug == "" || c.Slug == "index" {
+		return "/"
 	}
 	return "/" + c.Slug
 }

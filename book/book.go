@@ -36,6 +36,9 @@ type Book struct {
 	// one output with an ssg site whose landing page owns "/". Set via
 	// Config.NoRootTOC.
 	noRootTOC bool
+	// indexChapter holds the root index page content when index.md is present
+	// at the root of the manuscript directory.
+	indexChapter *Chapter
 	// extraCSS holds additional stylesheet URLs linked after mdbind.css on
 	// every page. Set from Config.ExtraCSS.
 	extraCSS []string

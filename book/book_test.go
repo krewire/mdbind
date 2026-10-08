@@ -1,6 +1,7 @@
 package book
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -742,5 +743,94 @@ func TestTitleFor(t *testing.T) {
 	}
 	if got := titleFor([]byte("no headings\n"), "the-slug"); got != "the-slug" {
 		t.Errorf("titleFor = %q, want the-slug", got)
+	}
+}
+
+func TestFrontmatterOrderAndNavigation(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"beta/index.md":   "---\ntitle: Beta Chapter\norder: 2\nprev: /alpha\nnext: none\n---\n# Beta Chapter\nBeta body",
+		"alpha/index.md":  "---\ntitle: Alpha Chapter\norder: 1\nnext: /beta\n---\n# Alpha Chapter\nAlpha body",
+		"alpha/second.md": "---\ntitle: Second Section\norder: 2\n---\n# Second Section\nSecond body",
+		"alpha/first.md":  "---\ntitle: First Section\norder: 1\n---\n# First Section\nFirst body",
+	})
+	b, err := Load(dir, "Test Book", "Author")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Chapters) != 2 {
+		t.Fatalf("expected 2 chapters, got %d", len(b.Chapters))
+	}
+	if b.Chapters[0].Title != "Alpha Chapter" || b.Chapters[1].Title != "Beta Chapter" {
+		t.Errorf("chapters not ordered by frontmatter order: got %s, %s", b.Chapters[0].Title, b.Chapters[1].Title)
+	}
+	subs := b.Chapters[0].Subs
+	if len(subs) != 2 {
+		t.Fatalf("expected 2 subchapters in alpha, got %d", len(subs))
+	}
+	if subs[0].Title != "First Section" || subs[1].Title != "Second Section" {
+		t.Errorf("subchapters not ordered by frontmatter order: got %s, %s", subs[0].Title, subs[1].Title)
+	}
+
+	pages, err := b.Pages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Find beta page and check prev link
+	for _, p := range pages {
+		if p.Path == "/beta" {
+			var buf bytes.Buffer
+			if err := p.Render(&buf); err != nil {
+				t.Fatal(err)
+			}
+			html := buf.String()
+			if !strings.Contains(html, `href="/alpha"`) {
+				t.Errorf("/beta missing custom prev link to /alpha, got: %s", html)
+			}
+			if strings.Contains(html, `class="next"`) {
+				t.Errorf("/beta should have next suppressed with next: none, got: %s", html)
+			}
+		}
+	}
+}
+
+func TestRootIndexMarkdown(t *testing.T) {
+	dir := writeManuscript(t, map[string]string{
+		"00-index.md":          "---\ntitle: Documentation Overview\n---\n# Documentation Overview\nWelcome to docs",
+		"01-guide/00-index.md": "---\ntitle: Guide Index\n---\n# Guide Index\nGuide body",
+		"01-guide/01-first.md": "---\ntitle: First Guide\n---\n# First Guide\nFirst guide body",
+	})
+	b, err := Load(dir, "Doc Site", "Author")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.indexChapter == nil {
+		t.Fatal("expected indexChapter to be loaded from root 00-index.md")
+	}
+	if len(b.Chapters) != 1 {
+		t.Fatalf("expected 1 chapter, got %d", len(b.Chapters))
+	}
+	if b.Chapters[0].Title != "Guide Index" {
+		t.Errorf("chapter 0 title = %q, want 'Guide Index'", b.Chapters[0].Title)
+	}
+	pages, err := b.Pages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundRoot := false
+	for _, p := range pages {
+		if p.Path == "/" {
+			foundRoot = true
+			var buf bytes.Buffer
+			if err := p.Render(&buf); err != nil {
+				t.Fatal(err)
+			}
+			html := buf.String()
+			if !strings.Contains(html, "Documentation Overview") || !strings.Contains(html, "Welcome to docs") {
+				t.Errorf("root page did not render 00-index.md body, got: %s", html)
+			}
+		}
+	}
+	if !foundRoot {
+		t.Error("root page '/' not found in Pages()")
 	}
 }
