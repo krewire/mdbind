@@ -46,6 +46,18 @@
   <div class="toc-no-results" id="toc-no-results" style="display:none" aria-live="polite">
     <span>◈ No matching chapters</span>
   </div>
+  {{if .NavLinks}}
+  <div class="sidebar-mobile-nav" aria-label="Main Navigation">
+    <div class="sidebar-mobile-nav-title">Navigation</div>
+    <div class="sidebar-mobile-nav-links">
+      {{range .NavLinks}}
+      <a class="sidebar-nav-link{{if eq .Text "GitHub"}} sidebar-nav-github{{end}}" href="{{.URL}}"{{if eq .Text "GitHub"}} target="_blank" rel="noopener"{{end}}>
+        <span>{{.Text}}</span>{{if eq .Text "GitHub"}}<span class="ext-icon">↗</span>{{end}}
+      </a>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
   <nav class="toc" id="sidebar-toc">
     {{range .Toc}}
       {{if .HasSubs}}

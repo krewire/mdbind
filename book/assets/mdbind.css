@@ -592,6 +592,74 @@ body {
   box-shadow: var(--pop-shadow-sm);
 }
 
+/* ── Mobile Navigation Drawer Links ────────────────────────────────────────── */
+.sidebar-mobile-nav {
+  display: none;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: var(--pop-border-thin);
+}
+
+.sidebar-mobile-nav-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.sidebar-mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13.5px;
+  background: var(--base-2);
+  border: var(--pop-border-thin);
+  box-shadow: var(--pop-shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.sidebar-nav-link:hover {
+  background: var(--base-3);
+  color: var(--primary);
+  transform: translate(-1px, -1px);
+}
+
+.sidebar-nav-link.sidebar-nav-github {
+  background: var(--primary);
+  color: var(--primary-content);
+  margin-top: 0.25rem;
+}
+
+.sidebar-nav-link.sidebar-nav-github:hover {
+  background: var(--primary);
+  color: var(--primary-content);
+}
+
+.sidebar-nav-link .ext-icon {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+@media (max-width: 63.99rem) {
+  .sidebar-mobile-nav {
+    display: block;
+  }
+}
+
 /* TOC Items */
 .toc {
   display: flex;
