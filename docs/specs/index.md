@@ -6,8 +6,8 @@ Ordered by **impact-to-effort** (high impact, low effort first) and **dependency
 
 | SpecID    | Title                                      | Status | Impl Status | Depends On |
 | --------- | ------------------------------------------ | ------ | ----------- | ---------- |
-| [KWM-FX9H2](./KWM-BUILDER-FX9H2-mdbind-site-builder.md) | mdbind Site Builder — Initial Specification | Draft | Shipped | — |
-| [KWM-4TCPA](./KWM-CLI-4TCPA-cli-workflows.md)      | mdbind CLI & Workflows                    | Draft | Superseded (standalone CLI → `kiw build` book mode) | KWM-FX9H2 |
+| [KWM-FX9H2](https://github.com/krewire/mdbind/issues/1) | mdbind Site Builder — Initial Specification | Draft | Shipped | — |
+| [KWM-4TCPA](https://github.com/krewire/mdbind/issues/2)      | mdbind CLI & Workflows                    | Draft | Superseded (standalone CLI → `kiw build` book mode) | KWM-FX9H2 |
 
 ## Conventions
 
