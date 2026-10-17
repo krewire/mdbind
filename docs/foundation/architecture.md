@@ -24,6 +24,6 @@ mdbind/
 
 ## Conventions
 
-- Documentation in English, Markdown, spec-driven (`docs/specs/`).
+- Documentation in English, Markdown.
 - Quality gates: `gofmt -l .`, `go vet ./...`, `go test ./...` in each Go repo; per-kind `kiw build` / `kiw build --plan` spot-checks.
 - Cross-repo testing via the hub `go.work` workspace; temporary `replace` directives only for single-repo clones outside the workspace.

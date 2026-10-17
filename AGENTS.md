@@ -12,31 +12,25 @@ and powers the `book` workload within the Krewire ecosystem (`kiw build`).
 - **Write all stored artifacts in English** — code, docs, commit messages, specs, reports.
 - If the human writes in Indonesian or another language, reply in the human's language in chat, but keep all repository files in English.
 
-## Specs & Progress Tracking (GitHub Issues SSOT)
+## Task & Progress Tracking (GitHub Issues SSOT)
 
-To keep progress tracking fully automated, resilient against markdown parsing drift, and deterministic for both AI agents and human developers:
+To keep progress tracking fully automated and deterministic for both AI agents and human developers:
 
 1. **GitHub Issues as Single Source of Truth:**
-   - Active specifications and their implementation progress are tracked as GitHub Issues under `krewire/mdbind` with label `spec`.
-   - Title format: `[Spec: KWM-<Code>] <Title>` (e.g. `[Spec: KWM-FX9H2] mdbind Site Builder`, `[Spec: KWM-4TCPA] mdbind Standalone CLI & Workflows`).
-   - Every issue body contains the structured requirement checklist with `- [ ]` and `- [x]` checkboxes citing `ReqID`, priority, and scope (e.g. `- [ ] MDB-CL-001 [Must] ...`).
-   - `docs/specs/index.md` links directly to these GitHub Issues.
+   - Active tasks, features, and fixes are tracked as GitHub Issues under `krewire/mdbind`.
+   - Every issue body contains a structured checklist with `- [ ]` and `- [x]` checkboxes.
 
-2. **Spec-Driven Traceability in Code:**
-   - ID prefix: `KWM-*`.
-   - Traceability: test files must cite `// Tests for KWM-<Code>` and individual tests cite requirement IDs (e.g. `MDB-CL-001`, `MDB-BD-001`).
-
-3. **Automated Agent & Developer Progress Workflow:**
-   - **Discovering tasks:** Query active specs via CLI/API:
+2. **Automated Agent & Developer Progress Workflow:**
+   - **Discovering tasks:** Query active issues via CLI/API:
      ```bash
-     gh issue list -R krewire/mdbind --label spec --json number,title,url
+     gh issue list -R krewire/mdbind --state open --json number,title,url
      gh issue view <number> -R krewire/mdbind --json title,body
      ```
    - **Verifying completion:** Run tests:
      ```bash
      go test ./...
      ```
-   - **Updating status:** When a requirement is implemented and verified by tests, check off the requirement box (`- [ ]` → `- [x]`) in the GitHub Issue body. Commits must reference the issue number and requirement ID (`feat(scope): implement <ReqID> (ref #<IssueNumber>, req <ReqID>)`). Close the issue once all requirements are completed.
+   - **Updating status:** When a task is implemented and verified by tests, check off the checklist item (`- [ ]` → `- [x]`) in the GitHub Issue body. Commits must reference the issue number (`feat(scope): implement feature (ref #<IssueNumber>)`). Close the issue once all tasks are completed.
 
 ## Quality Gates
 

@@ -4,9 +4,9 @@ mdbind — Book Builder (`github.com/krewire/mdbind`) — Book kind — Markdown
 
 ## Contents
 
-- [Architecture](./architecture.md) — module structure, design decisions, dependency graph
-- [Philosophy](./philosophy.md) — principles and contribution guidance
-- [Specifications](./specs/index.md) — formal `github.com/krewire/mdbind` specs (`KWM-*`)
+- [Architecture](./foundation/architecture.md) — module structure, design decisions, dependency graph
+- [Philosophy](./foundation/philosophy.md) — principles and contribution guidance
+- [Task Tracking](https://github.com/krewire/mdbind/issues) — active tasks and roadmap via GitHub Issues
 
 ## Getting Started
 
@@ -15,4 +15,4 @@ mdbind — Book Builder (`github.com/krewire/mdbind`) — Book kind — Markdown
 
 ## Conventions
 
-- English, Markdown, spec-driven; file name `{ProjectId}-{Scope}-{SpecID}-{slug}.md`, random 5-char SpecID.
+- English, Markdown.
