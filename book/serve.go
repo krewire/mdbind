@@ -1,10 +1,37 @@
 package book
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 )
+
+// defaultServerTimeouts prevents connection exhaustion and Slowloris attacks.
+const (
+	defaultReadHeaderTimeout = 5 * time.Second
+	defaultReadTimeout       = 15 * time.Second
+	defaultWriteTimeout      = 15 * time.Second
+	defaultIdleTimeout       = 60 * time.Second
+	defaultShutdownTimeout   = 10 * time.Second
+)
+
+// newServer constructs an http.Server with hardened timeouts.
+func newServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
+		ReadTimeout:       defaultReadTimeout,
+		WriteTimeout:      defaultWriteTimeout,
+		IdleTimeout:       defaultIdleTimeout,
+	}
+}
 
 // Handler returns an http.Handler that serves the book's pages and assets
 // through a stdlib ServeMux. It is intentionally not dependent on
@@ -46,14 +73,44 @@ func (b *Book) Handler() (http.Handler, error) {
 	return handler, nil
 }
 
-// Serve serves the book over HTTP on addr, blocking until the server stops.
+// Serve serves the book over HTTP on addr, shutting down gracefully on
+// SIGINT/SIGTERM or when ctx is cancelled.
 func Serve(b *Book, addr string) error {
 	h, err := b.Handler()
 	if err != nil {
 		return err
 	}
 	slog.Info("serving book", "addr", addr)
-	return http.ListenAndServe(addr, h)
+	return serveWithGracefulShutdown(newServer(addr, h))
+}
+
+// serveWithGracefulShutdown runs srv until SIGINT/SIGTERM, then drains
+// in-flight requests within defaultShutdownTimeout.
+func serveWithGracefulShutdown(srv *http.Server) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+		close(errCh)
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+	}
+
+	shutCtx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutCtx); err != nil {
+		_ = srv.Close()
+		return err
+	}
+	return nil
 }
 
 // LiveHandler returns an http.Handler that re-reads Markdown files on every
@@ -118,9 +175,10 @@ func LiveHandler(cfg Config) http.Handler {
 	})
 }
 
-// ServeConfig serves the book using live loading on addr.
+// ServeConfig serves the book using live loading on addr, shutting down
+// gracefully on SIGINT/SIGTERM.
 func ServeConfig(cfg Config, addr string) error {
 	h := LiveHandler(cfg)
 	slog.Info("serving live book", "addr", addr)
-	return http.ListenAndServe(addr, h)
+	return serveWithGracefulShutdown(newServer(addr, h))
 }
