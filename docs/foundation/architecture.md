@@ -4,10 +4,10 @@
 
 ```
 mdbind/
-├── book/                 # Core: load content/, render Markdown via libs/markdown (GFM), file-based routing, export to .krewire/build
+├── book/                 # Core: load content/, render Markdown via packages/markdown (GFM), file-based routing, export to .krewire/build
 │   ├── assets/           # mdbind.css (+ local ThemeModeVarsCSS/ThemeToggleCSS)
 │   ├── templates/        # chrome.tmpl, chapter.tmpl, index.tmpl
-│   └── theme.go          # local Theme/Palette (mirrors framework/ui shape, no framework import)
+│   └── theme.go          # local Theme/Palette (mirrors packages/ui shape, no packages/ui import)
 ├── cmd/mdbind/           # Standalone CLI (for non-Krewire use; Krewire projects use `kiw build`)
 ├── internal/commands/    # build/serve subcommands
 └── docs/
