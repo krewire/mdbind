@@ -13,9 +13,10 @@ const ThemeModeVarsCSS = `:root { --show-sun: block; --show-moon: none; }
 :root[data-theme="dark"] { --show-sun: none; --show-moon: block; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme]) { --show-sun: none; --show-moon: block; } }`
 
-const ThemeToggleCSS = `.theme-toggle { border: 1px solid var(--neutral); border-radius: 999px; background: transparent; color: var(--ink); padding: .35rem .5rem; line-height: 0; cursor: pointer; transition: border-color .2s ease, color .2s ease; }
-.theme-toggle:hover { border-color: var(--primary); color: var(--primary); }
-.theme-toggle svg { width: 1.05rem; height: 1.05rem; display: block; }
+const ThemeToggleCSS = `.theme-toggle { border: var(--pop-border-thin, 2px solid #0B1F3B); box-shadow: var(--pop-shadow-sm, 2px 2px 0px #0B1F3B); border-radius: 8px; background: var(--base-2, #f0ede5); color: var(--ink, #0B1F3B); width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; }
+.theme-toggle:hover { background: var(--base-3, #e3dfd5); transform: translate(-1px, -1px); box-shadow: 3px 3px 0px var(--border, #0B1F3B); }
+.theme-toggle:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--border, #0B1F3B); }
+.theme-toggle svg { width: 17px; height: 17px; display: block; }
 .theme-toggle .icon-sun { display: var(--show-sun); }
 .theme-toggle .icon-moon { display: var(--show-moon); }`
 
@@ -172,6 +173,6 @@ func (t Theme) Button() template.HTML {
 
 func themeJS(key, def string) string {
 	var b strings.Builder
-	b.WriteString(`(function(){var k=` + strconv.Quote(key) + `,d=` + strconv.Quote(def) + `,t=d;try{t=localStorage.getItem(k)||d}catch(e){}var m=window.matchMedia('(prefers-color-scheme: dark)');function apply(){var dark=t==='dark'||(t==='auto'&&m.matches);var r=document.documentElement;r.dataset.theme=dark?'dark':'light';r.style.colorScheme=dark?'dark':'light';var meta=document.querySelector('meta[name="color-scheme"]');if(meta)meta.content=dark?'dark':'light'}apply();if(m.addEventListener){m.addEventListener('change',function(){if(t==='auto')apply()})}window.krewireTheme={get:function(){return t},set:function(x){t=x;try{localStorage.setItem(k,x)}catch(e){}apply()},toggle:function(){var dark=t==='dark'||(t==='auto'&&m.matches);window.krewireTheme.set(dark?'light':'dark')}};document.addEventListener('click',function(e){var el=e.target&&e.target.closest?e.target.closest('[data-theme-toggle]'):null;if(el)window.krewireTheme.toggle()})})();`)
+	b.WriteString(`(function(){var k=` + strconv.Quote(key) + `,d=` + strconv.Quote(def) + `,t=d;try{t=localStorage.getItem(k)||d}catch(e){}var m=window.matchMedia('(prefers-color-scheme: dark)');function apply(){var dark=t==='dark'||(t==='auto'&&m.matches);var r=document.documentElement;r.dataset.theme=dark?'dark':'light';r.style.colorScheme=dark?'dark':'light';var meta=document.querySelector('meta[name="color-scheme"]');if(meta)meta.content=dark?'dark':'light'}apply();if(m.addEventListener){m.addEventListener('change',function(){if(t==='auto')apply()})}window.krewireTheme={get:function(){return t},set:function(x){t=x;try{localStorage.setItem(k,x)}catch(e){}apply()},toggle:function(){var dark=t==='dark'||(t==='auto'&&m.matches);window.krewireTheme.set(dark?'light':'dark')}};if(!window._krewireThemeBound){window._krewireThemeBound=true;document.addEventListener('click',function(e){var el=e.target&&e.target.closest?e.target.closest('[data-theme-toggle]'):null;if(el){e.preventDefault();window.krewireTheme.toggle()}})}})();`)
 	return b.String()
 }

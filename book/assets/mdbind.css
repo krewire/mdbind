@@ -1362,3 +1362,13 @@ nav.pager a.next::before {
 .chapter-card-list li {
   margin-bottom: 0.25rem !important;
 }
+
+/* Bilingual Pager Titles */
+:root[lang="id"] nav.pager a.prev::before,
+html[lang="id"] nav.pager a.prev::before {
+  content: "Bab Sebelumnya";
+}
+:root[lang="id"] nav.pager a.next::before,
+html[lang="id"] nav.pager a.next::before {
+  content: "Bab Selanjutnya";
+}
