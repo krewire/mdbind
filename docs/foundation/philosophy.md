@@ -6,7 +6,7 @@
 
 **Principles:**
 
-- **Lightweight & co-installable.** Built on `packages/markdown` (Goldmark, shared across the ecosystem) and standard library; `packages/*` and `mdbind` can be required together for progressive enhancement (`book` → `site` without rewrite).
+- **Lightweight & co-installable.** Built on `packages/markdown` (Goldmark, shared across the ecosystem) and standard library; `pkg/*` and `mdbind` can be required together for progressive enhancement (`book` → `site` without rewrite).
 - **Static export.** Output is `.krewire/build` by default (each page as `<path>.html` + assets) — host anywhere, configurable via `krewire.yaml` `output` or `--output/-o`.
 
 

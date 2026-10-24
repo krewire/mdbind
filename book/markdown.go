@@ -1,7 +1,7 @@
 package book
 
 import (
-	"github.com/krewire/krewire/packages/markdown"
+	"github.com/krewire/krewire/pkg/markdown"
 )
 
 // renderMarkdown converts a Markdown body to an HTML fragment, prefixing
